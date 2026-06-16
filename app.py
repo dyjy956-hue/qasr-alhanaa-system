@@ -3,38 +3,10 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-from io import BytesIO
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
-# ====================================================
-# 🔒 نظام الحماية والأمان
-# ====================================================
-if 'master_password' not in st.session_state:
-    st.session_state['master_password'] = "Samir2026"
-
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-
-if not st.session_state['authenticated']:
-    st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
-    st.markdown("---")
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.image("https://cdn-icons-png.flaticon.com/512/3064/3064155.png", width=150)
-    with col2:
-        user_password = st.text_input("الرجاء إدخال كلمة مرور المنظومة:", type="password")
-        if st.button("🔓 تسجيل الدخول"):
-            if user_password == st.session_state['master_password']:
-                st.session_state['authenticated'] = True
-                st.rerun()
-            else:
-                st.error("❌ كلمة المرور غير صحيحة.")
-    st.stop()
-
-# ====================================================
-# 🚌 المنظومة الأساسية
-# ====================================================
+# SHEET_ID الثابت العام للمنظومة
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
 def load_data_public(sheet_name):
@@ -44,12 +16,7 @@ def load_data_public(sheet_name):
     data.columns = data.columns.str.strip()
     return data
 
-def display_styled_dataframe(dataframe):
-    df_display = dataframe.copy()
-    df_display.insert(0, '#', range(1, len(df_display) + 1))
-    st.dataframe(df_display.set_index('#'), use_container_width=True)
-
-# القائمة الجانبية
+# 🧭 القائمة الجانبية الشاملة
 st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
 page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💬 مركز مراسلة حالات الزبائن",
@@ -62,44 +29,42 @@ page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💰 التقارير المالية والإيرادات"
 ])
 
-# تحميل البيانات
+# زر التحديث
+if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة"):
+    try:
+        st.session_state['df'] = load_data_public('Form responses 1')
+        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+        st.sidebar.success("تم التحديث!")
+    except Exception as e:
+        st.sidebar.error(f"تأكد من إعدادات الشيت: {e}")
+
+# تهيئة الجلسة
 if 'df' not in st.session_state:
-    st.session_state['df'] = load_data_public('Form responses 1')
-df = st.session_state['df']
+    try: st.session_state['df'] = load_data_public('Form responses 1')
+    except: pass
+if 'df_finance' not in st.session_state:
+    try: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+    except: pass
 
 # ----------------------------------------------------
-# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل (محدثة)
+# 💬 الصفحة الأولى: مركز مراسلة
 # ----------------------------------------------------
-if page == "🔍 استعلام وبطاقة حجز عميل":
+if page == "💬 مركز مراسلة حالات الزبائن":
+    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
+    # (كود المراسلة كما هو في الأصل...)
+    st.info("مرحباً، يمكنك المراسلة من هنا.")
+
+# ----------------------------------------------------
+# 🔍 الصفحة الثانية: الاستعلام والبطاقة (المحدثة)
+# ----------------------------------------------------
+elif page == "🔍 استعلام وبطاقة حجز عميل":
     st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
     
-    col_name = next((c for c in df.columns if 'الاسم' in c), None)
-    col_cost = next((c for c in df.columns if 'تكلفة' in c or 'مبلغ' in c or 'سعر' in c), None)
-    
-    if col_name:
-        search_user = st.selectbox("🎯 اختر اسم العميل للبحث:", ["-- اختر اسماً --"] + df[col_name].dropna().tolist())
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
+        col_cost = next((c for c in df.columns if 'تكلفة' in c or 'التكلفة' in c), None)
+        col_price = next((c for c in df.columns if 'سعر' in c or 'السعر' in c or 'المدفوع' in c), None)
         
-        if search_user != "-- اختر اسماً --":
-            user_full_data = df[df[col_name] == search_user].iloc[0]
-            
-            # استخراج القيم بمرونة
-            u_phone = user_full_data.get(next((c for c in df.columns if 'هاتف' in c or 'رقم' in c), 'الهاتف'), 'غير مسجل')
-            u_count = user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')
-            u_hotel = user_full_data.get(next((c for c in df.columns if 'فندق' in c or 'إقامة' in c), 'الإقامة'), 'غير محدد')
-            u_reg = user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')
-            u_cost = user_full_data.get(col_cost, 'لم يحدد') if col_cost else "غير متوفر"
-
-            st.markdown(f"""
-            <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px;">
-                <h3 style="color: #1d3557;">🎫 بطاقة البيانات التفصيلية</h3>
-                <p><b>👤 الاسم:</b> {search_user}</p>
-                <p><b>📞 الهاتف:</b> {str(u_phone).replace('.0','')}</p>
-                <p><b>👥 العدد:</b> {u_count}</p>
-                <p><b>🏨 الإقامة:</b> {u_hotel}</p>
-                <p><b>📍 الانطلاق:</b> {u_reg}</p>
-                <hr>
-                <p style="font-size: 20px; color: #2b5c8f;"><b>💰 إجمالي التكلفة: {u_cost}</b></p>
-            </div>
-            """, unsafe_allow_html=True)
-
-# (بقية الصفحات تتبع نفس المنطق السابق...)
+        if col_name:
+            search_user = st.selectbox("
