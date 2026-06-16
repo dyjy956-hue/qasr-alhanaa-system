@@ -4,6 +4,8 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
+import matplotlib.pyplot as plt
+from io import BytesIO
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
@@ -16,6 +18,46 @@ def load_data_public(sheet_name):
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
     return data
+
+# دالة هندسية ذكية لتوليد ملف PDF احترافي للجدول يدعم اللغة العربية ومقاوم لتكسر الحروف السحابي
+def convert_df_to_pdf(df_to_export, title_text):
+    # نختار الأعمدة الأساسية فقط للكشف ليكون واضحاً ومقروءاً عند الطباعة أو الإرسال
+    keep_cols = [c for c in df_to_export.columns if any(k in c for k in ['الاسم', 'الهاتف', 'رقم', 'العدد', 'أفراد', 'الإقامة', 'فندق', 'انطلاق', 'مكان'])]
+    if not keep_cols:
+        keep_cols = df_to_export.columns[:5]
+    
+    df_clean = df_to_export[keep_cols].copy()
+    
+    # تحضير لوحة الرسم من Matplotlib
+    fig, ax = plt.subplots(figsize=(11, len(df_clean) * 0.4 + 2))
+    ax.axis('tight')
+    ax.axis('off')
+    
+    # إضافة عنوان فخم للكشف في الأعلى
+    plt.title(title_text, fontsize=16, weight='bold', pad=20, loc='center')
+    
+    # بناء الجدول وتنسيق الألوان ليكون مريحاً وقابلاً للطباعة
+    table = ax.table(
+        cellText=df_clean.values, 
+        colLabels=df_clean.columns, 
+        cellLoc='center', 
+        loc='center'
+    )
+    
+    table.auto_set_font_size(False)
+    table.set_font_size(10)
+    table.scale(1.2, 1.5)
+    
+    # تلوين ترويسة الجدول (Header) باللون الأزرق الداكن لشركة قصر الهناء
+    for key, cell in table.get_celld().items():
+        if key[0] == 0:
+            cell.set_text_props(weight='bold', color='white')
+            cell.set_facecolor('#1d3557')
+            
+    buf = BytesIO()
+    plt.savefig(buf, format='pdf', bbox_inches='tight')
+    plt.close(fig)
+    return buf.getvalue()
 
 # 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
 st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
@@ -41,21 +83,17 @@ if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة")
 
 # تأمين وجود البيانات في session_state لتفادي أخطاء أول تشغيل
 if 'df' not in st.session_state:
-    try:
-        st.session_state['df'] = load_data_public('Form responses 1')
-    except:
-        pass
+    try: st.session_state['df'] = load_data_public('Form responses 1')
+    except: pass
 
 if 'df_finance' not in st.session_state:
-    try:
-        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
-    except:
-        pass
+    try: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+    except: pass
 
 # ----------------------------------------------------
 # 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
 # ----------------------------------------------------
-if page == "💬 مركز مراسلة حالات الزبائن":
+if page == "💬 center مراسلة حالات الزبائن" or page == "💬 مركز مراسلة حالات الزبائن":
     st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
     st.subheader("مركز المراسلات الذكي وحالات الزبائن")
     st.markdown("---")
@@ -85,13 +123,11 @@ if page == "💬 مركز مراسلة حالات الزبائن":
             
             if selected_user:
                 user_data = df_filtered[df_filtered[col_name] == selected_user].iloc[0]
-                
                 u_name = user_data[col_name]
                 u_phone = user_data[col_phone]
                 u_count = user_data[col_count] if col_count else "غير محدد"
                 u_hotel = user_data[col_hotel] if col_hotel else "غير محدد"
                 u_reg = str(user_data[col_region]) if col_region else ""
-                
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
                 msg_confirm = (
@@ -172,7 +208,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 with col5: st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل (الجديدة)
+# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
 # ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
     st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
@@ -188,8 +224,6 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             
             if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
-                
-                # إنشاء تصميم أنيق لعرض التفاصيل كبطاقة
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
                     <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
@@ -201,113 +235,103 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
                     <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                st.markdown("#### 📄 الصف الكامل للبيانات كما ورد في الشيت:")
-                st.dataframe(pd.DataFrame([user_full_data]), use_container_width=True)
         else:
-            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات للبحث به.")
+            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات.")
 
 # ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب
+# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر الـ PDF الكلي
 # ----------------------------------------------------
 elif page == "📋 الكشف الكلي لجميع الركاب":
     st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
-    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
     st.markdown("---")
-    
     if 'df' in st.session_state:
         df = st.session_state['df']
         st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
+        
+        # زر توليد الـ PDF الكلي الجديد للشيت بالكامل
+        pdf_total_data = convert_df_to_pdf(df, "الكشف الكلي والشامل لجميع الركاب - شركة قصر الهناء")
+        st.download_button("📥 تحميل الكشف العام كاملاً كملف PDF", data=pdf_total_data, file_name="Total_Trip_Passengers.pdf", mime="application/pdf")
+        
         st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا
+# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا + زر الـ PDF
 # ----------------------------------------------------
 elif page == "🏢 كشف نزلاء فندق قورينا":
     st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
     st.markdown("---")
-    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        
         if col_hotel:
             df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
             st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
+            
+            pdf_data = convert_df_to_pdf(df_quryna, "كشف نزلاء فندق قورينا - شركة قصر الهناء")
+            st.download_button("📥 تحميل الكشف كملف PDF للفندق", data=pdf_data, file_name="Quryna_Hotel_Guests.pdf", mime="application/pdf")
+            
             st.dataframe(df_quryna, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات
+# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات + زر الـ PDF
 # ----------------------------------------------------
 elif page == "🌲 كشف نزلاء منتجع شحات":
     st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
     st.markdown("---")
-    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        
         if col_hotel:
             df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
             st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
+            
+            pdf_data = convert_df_to_pdf(df_shahat, "كشف نزلاء منتجع شحات - شركة قصر الهناء")
+            st.download_button("📥 تحميل الكشف كملف PDF للمنتجع", data=pdf_data, file_name="Shahat_Resort_Guests.pdf", mime="application/pdf")
+            
             st.dataframe(df_shahat, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
+# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب + زر الـ PDF
 # ----------------------------------------------------
 elif page == "🟢 كشف ركاب طرابلس والغرب":
     st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
-    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
     st.markdown("---")
-    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        
         if col_region:
             df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
+            
+            pdf_data = convert_df_to_pdf(df_tripoli, "كشف ركاب باص طرابلس والغرب - شركة قصر الهناء")
+            st.download_button("📥 تحميل الكشف كملف PDF للحافلة", data=pdf_data, file_name="Tripoli_Bus_Passengers.pdf", mime="application/pdf")
+            
             st.dataframe(df_tripoli, use_container_width=True)
-        else:
-            st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية
+# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية + زر الـ PDF
 # ----------------------------------------------------
 elif page == "🔵 كشف ركاب المنطقة الشرقية":
     st.title("🔵 كشف ركاب المنطقة الشرقية")
-    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
     st.markdown("---")
-    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        
         if col_region:
             df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
+            
+            pdf_data = convert_df_to_pdf(df_east, "كشف ركاب المنطقة الشرقية - شركة قصر الهناء")
+            st.download_button("📥 تحميل الكشف كملف PDF للشرقية", data=pdf_data, file_name="Eastern_Region_Passengers.pdf", mime="application/pdf")
+            
             st.dataframe(df_east, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
 
 # ----------------------------------------------------
 # 💰 الصفحة الثامنة: التقارير المالية والإيرادات
 # ----------------------------------------------------
 elif page == "💰 التقارير المالية والإيرادات":
     st.title("💰 الإيرادات والتقارير المالية للشركة")
-    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
     st.markdown("---")
-
     if 'df_finance' in st.session_state:
         df_finance = st.session_state['df_finance']
-        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
         st.dataframe(df_finance, use_container_width=True)
-        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
-    else:
-        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب Tقرير المالي.")
