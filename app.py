@@ -8,7 +8,7 @@ from io import BytesIO
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
 # ====================================================
-# 🔒 نظام الحماية
+# 🔒 نظام الحماية والأمان
 # ====================================================
 if 'master_password' not in st.session_state:
     st.session_state['master_password'] = "Samir2026"
@@ -16,64 +16,86 @@ if 'master_password' not in st.session_state:
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 
-def main_system():
-    SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
+if not st.session_state['authenticated']:
+    st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
+    st.markdown("---")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image("https://cdn-icons-png.flaticon.com/512/3064/3064155.png", width=150)
+    with col2:
+        user_password = st.text_input("الرجاء إدخال كلمة مرور المنظومة:", type="password")
+        if st.button("🔓 تسجيل الدخول"):
+            if user_password == st.session_state['master_password']:
+                st.session_state['authenticated'] = True
+                st.rerun()
+            else:
+                st.error("❌ كلمة المرور غير صحيحة.")
+    st.stop()
 
-    def load_data_public(sheet_name):
-        url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={urllib.parse.quote(sheet_name)}'
-        data = pd.read_csv(url)
-        data.columns = data.columns.str.strip()
-        return data
+# ====================================================
+# 🚌 بداية المنظومة
+# ====================================================
+SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
-    # القائمة الجانبية
-    st.sidebar.title("🏢 لوحة تحكم قصر الهناء")
-    page = st.sidebar.radio("انتقل إلى:", ["💬 مراسلة الزبائن", "🔍 استعلام وتكلفة", "📋 الكشف الكلي", "💰 التقارير"])
+def load_data_public(sheet_name):
+    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={urllib.parse.quote(sheet_name)}'
+    data = pd.read_csv(url)
+    data.columns = data.columns.str.strip()
+    return data
 
-    if 'df' not in st.session_state:
-        st.session_state['df'] = load_data_public('Form responses 1')
-        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+def convert_df_to_excel(df_to_export):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_to_export.to_excel(writer, index=False)
+    return output.getvalue()
+
+def display_styled_dataframe(dataframe):
+    st.dataframe(dataframe, use_container_width=True)
+
+st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
+page = st.sidebar.radio("انتقل إلى القائمة:", [
+    "💬 مركز مراسلة حالات الزبائن", "🔍 استعلام وبطاقة حجز عميل", "📋 الكشف الكلي لجميع الركاب",
+    "🏢 كشف نزلاء فندق قورينا", "🌲 كشف نزلاء منتجع شحات", "🟢 كشف ركاب طرابلس والغرب", 
+    "🔵 كشف ركاب المنطقة الشرقية", "💰 التقارير المالية والإيرادات"
+])
+
+if 'df' not in st.session_state:
+    st.session_state['df'] = load_data_public('Form responses 1')
+    st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+
+df = st.session_state['df']
+
+# ----------------------------------------------------
+# 💬 مركز مراسلة حالات الزبائن (التعديل هنا)
+# ----------------------------------------------------
+if page == "💬 مركز مراسلة حالات الزبائن":
+    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
+    col_name = next((c for c in df.columns if 'اسم' in c), None)
+    col_phone = next((c for c in df.columns if 'هاتف' in c or 'رقم' in c), None)
     
-    df = st.session_state['df']
-
-    # 💬 صفحة مراسلة الزبائن
-    if page == "💬 مراسلة الزبائن":
-        st.title("💬 مركز المراسلات الذكي")
-        name_col = next((c for c in df.columns if 'اسم' in c), df.columns[0])
-        phone_col = next((c for c in df.columns if 'هاتف' in c or 'رقم' in c), df.columns[1])
+    selected_user = st.selectbox("اختر اسم الزبون:", df[col_name].dropna().tolist())
+    if selected_user:
+        u_data = df[df[col_name] == selected_user].iloc[0]
+        p = str(u_data[col_phone]).replace('.0','').replace('+', '').replace(' ', '')
         
-        selected = st.selectbox("اختر العميل:", df[name_col].dropna().tolist())
-        if selected:
-            row = df[df[name_col] == selected].iloc[0]
-            phone = str(row[phone_col]).replace('.0', '').replace('+', '').replace(' ', '')
-            
-            # نص الرسالة الاحترافي والمزخرف
-            msg = f"✨ *شركة قصر الهناء للسياحة* 🌹\n\nأهلاً أستاذ/ة *{selected}*،\nتم استلام بيانات تسجيلكم لرحلة الجبل الأخضر 2026 بنجاح 🚌🏔️\n\n📌 *تفاصيل الحجز:* \n👥 العدد: {row.get('العدد', 'غير محدد')}\n🏨 الإقامة: {row.get('الإقامة', 'غير محدد')}\n\n💳 *ملاحظة:* ننتظر زيارتكم للمقر لإتمام الإجراءات.\n\n*دمتم بخير وفي أمان الله!* 🌹"
-            
-            # التعديل هنا: استخدام whatsapp://send لفتح التطبيق فوراً
-            url = f"whatsapp://send?phone={phone}&text={urllib.parse.quote(msg)}"
-            
-            st.markdown(f'<a href="{url}"><button style="background-color:#25D366; color:white; padding:15px; border-radius:10px; width:100%; border:none; font-weight:bold; cursor:pointer;">🚀 إرسال رسالة من تطبيق واتساب مباشرة</button></a>', unsafe_allow_html=True)
+        # نصوص الرسائل
+        msg_text = f"أهلاً أستاذ/ة {selected_user}، تم تأكيد تسجيلكم لرحلة الجبل الأخضر 2026."
+        
+        # التعديل الجوهري: استخدام whatsapp://send لفتح التطبيق مباشرة
+        url = f"whatsapp://send?phone={p}&text={urllib.parse.quote(msg_text)}"
+        
+        st.markdown(f'<a href="{url}" style="text-decoration:none;"><button style="background-color: #25D366; color: white; padding: 15px; border-radius: 8px; border: none; font-weight: bold; width: 100%;">🚀 إرسال عبر تطبيق واتساب</button></a>', unsafe_allow_html=True)
 
-    # 🔍 الاستعلام
-    elif page == "🔍 استعلام وتكلفة":
-        name_col = next((c for c in df.columns if 'اسم' in c), df.columns[0])
-        cost_col = next((c for c in df.columns if 'تكلفة' in c or 'مبلغ' in c), None)
-        selected = st.selectbox("اختر العميل:", df[name_col].dropna().tolist())
-        if selected:
-            row = df[df[name_col] == selected].iloc[0]
-            cost = row.get(cost_col, "غير مسجل") if cost_col else "لا يوجد عمود تكلفة"
-            st.markdown(f'<div style="background-color:#f0f2f6; padding:20px; border-radius:10px;"><h3>👤 العميل: {selected}</h3><p><b>💰 إجمالي التكلفة:</b> {cost}</p></div>', unsafe_allow_html=True)
+# ----------------------------------------------------
+# باقة الصفحات الأخرى (تم اختصارها للتنظيم)
+# ----------------------------------------------------
+elif page == "📋 الكشف الكلي لجميع الركاب":
+    display_styled_dataframe(df)
 
-    elif page == "📋 الكشف الكلي":
-        st.dataframe(df, use_container_width=True)
-    
-    elif page == "💰 التقارير":
-        st.dataframe(st.session_state['df_finance'], use_container_width=True)
+elif page == "💰 التقارير المالية والإيرادات":
+    st.dataframe(st.session_state['df_finance'], use_container_width=True)
 
-# التشغيل
-if st.session_state['authenticated']:
-    main_system()
-else:
-    st.title("🔒 تسجيل دخول منظومة قصر الهناء")
-    pw = st.text_input("كلمة المرور:", type="password")
-    if st.button("دخول"):
+# زر الخروج
+if st.sidebar.button("🔒 تسجيل الخروج"):
+    st.session_state['authenticated'] = False
+    st.rerun()
