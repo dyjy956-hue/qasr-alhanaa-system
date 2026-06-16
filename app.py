@@ -174,4 +174,63 @@ if page == "📋 إدارة ومراسلة الحجوزات":
 
 تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨
 
-📌 *
+📌 *الاسم:* {u_name}
+👥 *العدد:* {u_count} أشخاص
+🏨 *الإقامة:* {u_hotel}
+📍 *مكان الانطلاق:* {u_reg}
+
+💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.
+
+*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"""
+
+                    msg_paid_e = f"""السلام عليكم ورحمة الله وبركاته،
+
+الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟
+
+يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳
+
+👥 *عدد المقاعد المؤكدة:* {u_count}
+🏨 *ترتيبات الإقامة:* {u_hotel}
+
+جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨
+
+*شكراً لكم - إدارة شركة قصر الهناء* 🌹"""
+
+                    msg_cancel_e = f"""السلام عليكم ورحمة الله وبركاته،
+
+الأستاذ(ة): *{u_name}* 🌹
+
+نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌
+
+نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
+
+*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"""
+                    
+                    url_confirm_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm_e)}"
+                    url_paid_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid_e)}"
+                    url_cancel_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel_e)}"
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1: st.markdown(f'<a href="{url_confirm_e}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<a href="{url_paid_e}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">🟢 2. السداد النهائي</button></a>', unsafe_allow_html=True)
+                    with col3: st.markdown(f'<a href="{url_cancel_e}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">🔴 3. إلغاء الحجز</button></a>', unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# 📊 الصفحة الثانية: التقارير المالية والإيرادات
+# ----------------------------------------------------
+elif page == "💰 التقارير المالية والإيرادات":
+    st.title("💰 الإيرادات والتقارير المالية للشركة")
+    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
+    
+    if st.button("🔄 سحب وتحديث البيانات المالية من السحابة"):
+        try:
+            st.session_state['df_finance'] = load_data_from_sheet('📊 التقرير المالي والإيرادات')
+            st.success("تم سحب وتحديث البيانات المالية الحية بنجاح!")
+        except Exception as e:
+            st.error(f"تأكد من وجود ورقة '📊 التقرير المالي والإيرادات' وإذن مشاركتها: {e}")
+
+    if 'df_finance' in st.session_state:
+        df_finance = st.session_state['df_finance']
+        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
+        st.dataframe(df_finance, use_container_width=True)
+        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
