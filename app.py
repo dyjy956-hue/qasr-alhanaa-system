@@ -350,7 +350,7 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
             df['clean_name'] = df[col_name].astype(str).str.strip()
             all_valid_names = df['clean_name'].tolist()
             
-            # تم إغلاق القوس المربع هنا ] بشكل قطعي وصحيح لمنع الـ SyntaxError نهائياً
+            # تم إصلاح غلق القوس المربع هنا
             st.session_state['attended_names'] = [n for n in st.session_state['attended_names'] if n in all_valid_names]
             
             df_attended = df[df['clean_name'].isin(st.session_state['attended_names'])].copy()
@@ -428,4 +428,50 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                     msg_welcome = f"تم تسجيل صعود عائلتكم الكريمة إلى الحافلة بنجاح! 🚌✨\n\nشركة قصر الهناء تتمنى لكم رحلة سعيدة وممتعة إلى الجبل الأخضر. رافقتكم السلامة 🌹"
                     url_welcome = f"whatsapp://send?phone={phone_for_msg}&text={urllib.parse.quote(msg_welcome)}"
                     
-                    col_btn1, col_
+                    # تم إصلاح هذا السطر ليعرف col_btn2 بالكامل بدلاً من col_ الناتجة عن خطأ كتابة
+                    col_btn1, col_btn2 = st.columns([3, 1])
+                    with col_btn1:
+                        st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%;">📲 إرسال رسالة الترحيب الفورية للراكب عبر واتساب</button></a>', unsafe_allow_html=True)
+                    with col_btn2:
+                        if st.button("🔄 جاهز للباركود التالي"):
+                            st.session_state['just_attended_name'] = None
+                            st.rerun()
+                else:
+                    st.error("⚠️ هذا الاسم غير مسجل في كشوفات هذه الرحلة.")
+            
+            st.markdown("---")
+            
+            col_tab1, col_tab2 = st.tabs(["🔴 العائلات المتبقية (لم تصل بعد)", "🟢 العائلات التي صعدت الحافلة"])
+            
+            with col_tab1:
+                if not df_missing.empty:
+                    st.write("📋 **اضغط على زر التنبيه بجانب اسم العائلة لإعلامهم ببدء صعود الحافلة فوراً:**")
+                    for idx, row in df_missing.iterrows():
+                        m_name = row[col_name]
+                        m_phone = row[col_phone]
+                        m_count = row[col_count] if col_count else "غير محدد"
+                        m_reg = row[col_region] if col_region else ""
+                        
+                        phone_alert_str = str(m_phone).replace('.0','') if '.' in str(m_phone) else str(m_phone)
+                        
+                        msg_alert = f"مرحباً يا أستاذ {m_name}، نحن الآن في مرحلة صعود حافلة قصر الهناء والانطلاق قريب جداً بمشيئة الله 🚌.\n\nيرجى التكرم بالتوجه نحو الحافلة وإبراز الباركود للمشرف لتسجيل حضوركم وصعودكم. ننتظركم بكل حب 🌹"
+                        url_alert = f"whatsapp://send?phone={phone_alert_str}&text={urllib.parse.quote(msg_alert)}"
+                        
+                        sub_c1, sub_c2 = st.columns([4, 1])
+                        with sub_c1:
+                            st.markdown(f"👤 **{m_name}** ({m_count} أشخاص) - محطة: {m_reg}")
+                        with sub_c2:
+                            st.markdown(f'<a href="{url_alert}"><button style="background-color: #d32f2f; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%;">🔔 تنبيه بالصعود</button></a>', unsafe_allow_html=True)
+                else:
+                    st.success("🎉 رائـع! اكتمل حضور جميع العائلات بنجاح، الحافلة جاهزة للانطلاق.")
+                    
+            with col_tab2:
+                if not df_attended.empty:
+                    show_cols = [col_name]
+                    if col_count: show_cols.append(col_count)
+                    if col_region: show_cols.append(col_region)
+                    st.dataframe(df_attended[show_cols], use_container_width=True)
+                else:
+                    st.info("ℹ️ لم يتم تسجيل صعود أي عائلة بعد.")
+        else:
+            st.warning("⚠️ يرجى التأكد من مطابقة أسماء أعمدة الشيت (الاسم والهاتف) لتفعيل نظام الباركود.")
