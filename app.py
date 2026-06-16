@@ -9,7 +9,7 @@ from io import BytesIO
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
 # ====================================================
-# 🔒 نظام الحماية والأمان المطور (Samir2026)
+# 🔒 نظام الحماية والأمان المطور والمضمون (Samir2026)
 # ====================================================
 if 'master_password' not in st.session_state:
     st.session_state['master_password'] = "Samir2026"
@@ -17,6 +17,7 @@ if 'master_password' not in st.session_state:
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 
+# إذا لم يتم التحقق، يتم إظهار شاشة الدخول المقفلة
 if not st.session_state['authenticated']:
     st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
     st.markdown("---")
@@ -31,14 +32,15 @@ if not st.session_state['authenticated']:
         if st.button("🔓 تسجيل الدخول"):
             if user_password == st.session_state['master_password']:
                 st.session_state['authenticated'] = True
-                st.success("تم التحقق بنجاح! جاري تحميل المنظومة...")
-                st.rerun()
+                st.success("✅ تم التحقق بنجاح! يرجى الضغط على زر (دخول المنظومة) أدناه للاستمرار:")
+                # إضافة زر تأكيد يدوي مضمون 100% لتفادي تعليق السيرفر السحابي
+                st.button("🚀 دخول المنظومة الآن")
             else:
                 st.error("❌ كلمة المرور غير صحيحة، يرجى إعادة المحاولة.")
     st.stop()
 
 # ====================================================
-# 🚌 بداية المنظومة الأصلية
+# 🚌 بداية المنظومة الأصلية (تفتح فوراً بعد تخطي الشرط)
 # ====================================================
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
@@ -73,4 +75,5 @@ def display_styled_dataframe(dataframe):
         df_display.insert(0, '#', range(1, len(df_display) + 1))
     st.dataframe(df_display.set_index('#'), use_container_width=True)
 
-# 🧭 القائمة الج
+# 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
+st.sidebar.title("🏢 لوحة تحكم شركة قصر
