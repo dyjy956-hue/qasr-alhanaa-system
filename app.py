@@ -127,7 +127,7 @@ if 'df_finance' not in st.session_state:
     except: pass
 
 # ----------------------------------------------------
-# 💬 الصفحات اللوجستية (1-7) كما هي تماماً
+# 💬 الصفحات اللوجستية (1-7)
 # ----------------------------------------------------
 if page == "💬 مركز مراسلة حالات الزبائن":
     st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
@@ -245,29 +245,44 @@ elif page == "🔵 كشف ركاب المنطقة الشرقية":
             display_styled_dataframe(df_east)
 
 # ----------------------------------------------------
-# 💰 الصفحة الثامنة: التنسيق الجديد والألوان للتقرير المالي الأصلي دون تغيير البيانات
+# 💰 الصفحة الثامنة: التقارير المالية والإيرادات (النسخة الفخمة والملونة بالكامل)
 # ----------------------------------------------------
 elif page == "💰 التقارير المالية والإيرادات":
     st.title("💰 الخزينة والتقارير المالية للشركة")
-    st.subheader("لوحة تحكم تفاعلية لمتابعة بنود حركة الحسابات")
+    st.subheader("لوحة تحكم تفاعلية ملونة بالكامل لمتابعة بنود الإيرادات والمصروفات")
     st.markdown("---")
     
     if 'df_finance' in st.session_state:
         df_finance = st.session_state['df_finance']
         
-        # 🎨 تصميم بطاقات علوية جمالية بالديكور والألوان لإعطاء طابع احترافي للشاشة
+        # 🎨 دالة ذكية لتلوين أسطر الجدول بناءً على الكلمات المفتاحية
+        def style_financial_rows(row):
+            # نقوم بالبحث داخل كل خانات السطر عن أي إشارة لنوع الحركة
+            row_str = " ".join(row.astype(str))
+            if any(k in row_str for k in ['إيراد', 'ايراد', 'قبض', 'سداد', 'دخل']):
+                return ['background-color: #e8f5e9; color: #1b5e20; font-weight: bold;'] * len(row)  # لون أخضر مريح
+            elif any(k in row_str for k in ['مصروف', 'مصاريف', 'صرف', 'دفع', 'خروج']):
+                return ['background-color: #ffebee; color: #b71c1c; font-weight: bold;'] * len(row)  # لون أحمر هادئ
+            return [''] * len(row)
+        
+        # 📊 بناء 3 بطاقات ملونة فخمة وكبيرة في الأعلى لعرض ملخص الوضع المالي
         m_col1, m_col2, m_col3 = st.columns(3)
         with m_col1:
-            st.markdown("""<div style="background-color: #f1f8e9; border-right: 5px solid #4caf50; padding: 15px; border-radius: 6px;"><p style="color: #2e7d32; margin:0; font-size:14px; font-weight:bold;">📊 إجمالي القيود المالية</p><h3 style="color: #1b5e20; margin:5px 0 0 0;">متابعة الإيرادات الحية</h3></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="background-color: #e8f5e9; border-right: 5px solid #2e7d32; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color: #2e7d32; margin:0; font-size:15px; font-weight:bold;">🟢 حركة المداخيل الحية</p><h3 style="color: #1b5e20; margin:5px 0 0 0;">متابعة الإيرادات المقبوضة</h3></div>""", unsafe_allow_html=True)
         with m_col2:
-            st.markdown("""<div style="background-color: #fff3e0; border-right: 5px solid #ff9800; padding: 15px; border-radius: 6px;"><p style="color: #e65100; margin:0; font-size:14px; font-weight:bold;">💼 حالة التدفق النقدي</p><h3 style="color: #e65100; margin:5px 0 0 0;">مطابقة لبيانات الجداول</h3></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="background-color: #ffebee; border-right: 5px solid #c62828; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color: #c62828; margin:0; font-size:15px; font-weight:bold;">🔴 حركة المصاريف الجارية</p><h3 style="color: #b71c1c; margin:5px 0 0 0;">متابعة البنود التشغيلية</h3></div>""", unsafe_allow_html=True)
         with m_col3:
-            st.markdown("""<div style="background-color: #e3f2fd; border-right: 5px solid #2196f3; padding: 15px; border-radius: 6px;"><p style="color: #1565c0; margin:0; font-size:14px; font-weight:bold;">🏢 إدارة قصر الهناء</p><h3 style="color: #0d47a1; margin:5px 0 0 0;">مواسم عمرة ورحلات 2026</h3></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="background-color: #e3f2fd; border-right: 5px solid #1565c0; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color: #1565c0; margin:0; font-size:14px; font-weight:bold;">🏢 إدارة شركة قصر الهناء</p><h3 style="color: #0d47a1; margin:5px 0 0 0;">مواسم وحسابات 2026</h3></div>""", unsafe_allow_html=True)
             
         st.markdown("<br>", unsafe_allow_html=True)
-        st.write("### 🗂️ كشف الحركة المالي القادم من الشيت الأصلي مباشرة:")
+        st.write("### 🗂️ كشف الحركة المالي المُلوّن ديناميكياً:")
         
-        # عرض الجدول الأصلي كما هو وبكل أعمدته ومحتوياته بدون أي تدخل رياضي أو برمي في البيانات
-        st.dataframe(df_finance, use_container_width=True)
+        # تطبيق التلوين الاحترافي الكامل على الجدول القادم من جوجل شيت دون تعديل حرف واحد في البيانات
+        styled_df = df_finance.style.apply(style_financial_rows, axis=1)
+        
+        # عرض الجدول الملون بحجم كامل وجذاب جداً للموظفين والإدارة
+        st.dataframe(styled_df, use_container_width=True, height=450)
+        
+        st.success("💡 ميزة ذكية: يتم تلوين كل سطر باللون الأخضر تلقائياً إذا كان (إيراد) وباللون الأحمر إذا كان (مصروف) بناءً على بيانات الشيت.")
     else:
         st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
