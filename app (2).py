@@ -1,5 +1,4 @@
- %%writefile app.py
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import urllib.parse
 
@@ -7,12 +6,11 @@ st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
 st.subheader("رحلة الجبل الأخضر 2026")
 
-# تم تحديث معرّف واسم الورقة بدقة هنا
+# معرّف الشيت واسم ورقة الفورم
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 SHEET_NAME = 'Form responses 1' 
 
 def load_data_public():
-    # ترميز اسم الورقة ليتوافق مع الرابط بوجود المسافات
     encoded_sheet = urllib.parse.quote(SHEET_NAME)
     url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
     data = pd.read_csv(url)
