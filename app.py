@@ -272,7 +272,7 @@ elif page == "🌲 كشف نزلاء منتجع شحات":
             st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
             st.dataframe(df_shahat, use_container_width=True)
         else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق in ملف البيانات لتصفية النزلاء.")
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
 # 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
@@ -344,12 +344,17 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
         
         if col_name and col_phone:
+            # تنظيف الهواتف بشكل دقيق وتصفيتها لحساب المتبقي والحاضر
             df['clean_phone'] = df[col_phone].astype(str).str.replace('.0', '', regex=False).str.strip()
+            all_valid_phones = df['clean_phone'].tolist()
             
-            # تصنيف وتصفية حية حقيقية للبيانات
+            # فلترة قائمة الحضور المؤقتة لاستبعاد أي نصوص فارغة أو نصوص خطأ
+            st.session_state['attended_phones'] = [p for p in st.session_state['attended_phones'] if p in all_valid_phones]
+            
             df_attended = df[df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
             df_missing = df[~df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
             
+            # عرض عدادات الإحصاء الحية والدقيقة
             c1, c2, c3 = st.columns(3)
             with c1: st.metric("👥 إجمالي العائلات بالرحلة", len(df))
             with c2: st.metric("🟢 عائلات تم تسجيل حضورها", len(df_attended))
@@ -375,16 +380,16 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                         detector = cv2.QRCodeDetector()
                         data, bbox, straight_qrcode = detector.detectAndDecode(gray)
                         
-                        if data:
+                        if data and str(data).strip() in all_valid_phones:
                             scanned_phone = str(data).strip()
                         else:
                             data, bbox, straight_qrcode = detector.detectAndDecode(opencv_img)
-                            if data:
+                            if data and str(data).strip() in all_valid_phones:
                                 scanned_phone = str(data).strip()
                             else:
-                                st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. الرجاء استخدام خيار 'التسجيل اليدوي السريع' فوراً كبديل لمنع التعطيل.")
+                                st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. الرجاء تقريب الكاميرا أو استخدام 'التسجيل اليدوي السريع'.")
                     except Exception as e:
-                        st.error("تنبيه: الكاميرا تعمل بالوضع المحمي، يرجى تفعيل 'التسجيل اليدوي السريع' لإتمام العمل فوراً بنجاح.")
+                        st.error("تنبيه الحساب السحابي: يرجى تفعيل 'التسجيل اليدوي السريع' لإتمام العمل فوراً بنجاح.")
             
             else:
                 st.write("### ✏️ اختر اسم العائلة المتواجدة أمامك الآن لتسجيلها:")
@@ -394,16 +399,18 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                 if selected_missing != "-- اختر اسم العائلة من القائمة لتسجيل حضورها فوراً --":
                     user_row_manual = df[df[col_name] == selected_missing]
                     if not user_row_manual.empty:
-                        scanned_phone = user_row_manual.iloc[0]['clean_phone']
+                        potential_phone = user_row_manual.iloc[0]['clean_phone']
+                        if potential_phone in all_valid_phones:
+                            scanned_phone = potential_phone
             
-            # تثبيت العائلة النشطة الممسوحة حالياً في الذاكرة الفرعية النشطة
-            if scanned_phone and scanned_phone != st.session_state['last_scanned_phone']:
+            # تحديث ذكي ومحمي: لا يتم الحفظ إلا إذا كان الرقم فريداً ومطابقاً لعمود الجوجل شيت الفعلي
+            if scanned_phone and scanned_phone in all_valid_phones and scanned_phone != st.session_state['last_scanned_phone']:
                 st.session_state['last_scanned_phone'] = scanned_phone
                 if scanned_phone not in st.session_state['attended_phones']:
                     st.session_state['attended_phones'].append(scanned_phone)
                 st.rerun()
 
-            # زر منفصل لتصفير الشاشة يدويًا واستقبال العائلة التالية بشكل آمن بدون أي تعليق
+            # عرض بيانات العائلة الحالية الممسوحة وتوليد زر المراسلة
             if st.session_state['last_scanned_phone']:
                 active_phone = st.session_state['last_scanned_phone']
                 user_row = df[df['clean_phone'] == active_phone]
@@ -430,8 +437,6 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                         if st.button("🔄 العائلة التالية"):
                             st.session_state['last_scanned_phone'] = None
                             st.rerun()
-                else:
-                    st.error("⚠️ هذا الرقم غير مسجل في كشوفات هذه الرحلة.")
             
             st.markdown("---")
             
