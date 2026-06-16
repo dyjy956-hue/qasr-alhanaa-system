@@ -65,7 +65,7 @@ if 'df' in st.session_state:
             
             phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
             
-            # 1. نص رسالة التأكيد المبدئي
+            # 1. نص رسالة الاستلام المبدئي التلقائي
             msg_confirm = (
                 f"السلام عليكم ورحمة الله وبركاته،\n\n"
                 f"مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
@@ -78,19 +78,20 @@ if 'df' in st.session_state:
                 f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
             )
             
-            # 2. نص رسالة التذكير بالدفع والسداد
+            # 2. نص رسالة حث الدفع والمقر (التي أرسلتها بالملّي)
             msg_remind_pay = (
-                f"السلام عليكم ورحمة الله وبركاته،\n\n"
-                f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌹\n\n"
-                f"نود تذكيركم بلطف بأن مقاعدكم لرحلة (الجبل الأخضر الساحر 2026) ما زالت محجوزة حجزاً مؤقتاً باسمكم 🚌⏰\n\n"
-                f"⚠️ ونظراً للإقبال الكبير واقتراب موعد إغلاق الكشوفات، يرجى استكمال إجراءات **السداد المالي لتأكيد الحجز نهائياً** خلال 48 ساعة لتجنب إلغاء المقاعد تلقائياً.\n\n"
-                f"💳 طرق السداد المتاحة:\n"
-                f"- نقداً أو صك في مقر الشركة.\n"
-                f"- تحويل مصرفي.\n\n"
-                f"يسعدنا جداً أن تكونوا معنا في رحلة العمر! للاستفسار أو التأكيد تواصلوا معنا مباشرة 📞"
+                f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
+                f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
+                f"💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:\n"
+                f"يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.\n\n"
+                f"📍 عنوان الشركة: طرابلس - الظهرة.\n"
+                f"⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.\n\n"
+                f"📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.\n\n"
+                f"نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنسى معكم! دمت بخير وفي أمان الله 🌹\n"
+                f"شركة قصر الهناء للاستثمار السياحي."
             )
             
-            # 3. نص رسالة تأكيد السداد المالي النهائي
+            # 3. نص رسالة تأكيد السداد المالي النهائي بعد الدفع في المقر
             msg_paid = (
                 f"السلام عليكم ورحمة الله وبركاته،\n\n"
                 f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟\n\n"
@@ -101,7 +102,7 @@ if 'df' in st.session_state:
                 f"*شكراً لكم - إدارة شركة قصر الهناء* 🌹"
             )
             
-            # 4. نص رسالة باص طرابلس وركاب الغرب (التي أرسلتها بالملّي)
+            # 4. نص رسالة باص طرابلس وركاب الغرب
             msg_tripoli_bus = (
                 f"السلام عليكم ورحمة الله وبركاته،\n\n"
                 f"ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
@@ -127,27 +128,26 @@ if 'df' in st.session_state:
                 f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
             )
 
-            # توليد الروابط المشفرة
+            # توليد الروابط المشفرة لكل حالة للواتساب
             url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
             url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
             url_paid = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid)}"
             url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
             url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
             
-            # عرض الأزرار الخمسة متناسقة وموزعة بالألوان
+            # بناء صفيف الأزرار الخمسة بشكل هندسي ممتاز
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
-                st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. حجز مبدئي</button></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
             with col2:
-                st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔷 2. تذكير بالدفع</button></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
             with col3:
-                st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. تأكيد المال</button></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
             with col4:
-                # ميزة ذكية: يظهر الزر البرتقالي مخصصاً لركاب طرابلس والغرب فقط بناءً على نص المعادلة السابقة لحظر الشرقية
                 if "الشرقية" not in u_reg:
                     st.markdown(f'<a href="{url_tripoli_bus}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🚌 4. باص طرابلس</button></a>', unsafe_allow_html=True)
                 else:
-                    st.button("🔒 4. ركاب الشرقية", disabled=True, help="هذا العميل تابع للمنطقة الشرقية وليس باص طرابلس.")
+                    st.button("🔒 4. ركاب الشرقية", disabled=True, help="هذا العميل تابع للمنطقة الشرقية.")
             with col5:
                 st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
