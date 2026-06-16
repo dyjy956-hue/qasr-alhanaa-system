@@ -4,10 +4,43 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-import matplotlib.pyplot as plt
 from io import BytesIO
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
+
+# ====================================================
+# 🔒 نظام الحماية والأمان المطور (تم تعديل الباسورد الدائم)
+# ====================================================
+# تعيين الباسورد الافتراضي الثابت عند إقلاع السيرفر
+if 'master_password' not in st.session_state:
+    st.session_state['master_password'] = "Samir2026"
+
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+
+if not st.session_state['authenticated']:
+    st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
+    st.markdown("---")
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.image("https://cdn-icons-png.flaticon.com/512/3064/3064155.png", width=150)
+    with col2:
+        st.write("### مرحباً بك في لوحة تحكم الإدارة")
+        user_password = st.text_input("الرجاء إدخال كلمة مرور المنظومة للدخول:", type="password")
+        
+        if st.button("🔓 تسجيل الدخول"):
+            if user_password == st.session_state['master_password']:
+                st.session_state['authenticated'] = True
+                st.success("تم التحقق بنجاح! جاري تحميل المنظومة...")
+                st.rerun()
+            else:
+                st.error("❌ كلمة المرور غير صحيحة، يرجى إعادة المحاولة.")
+    st.stop()
+
+# ====================================================
+# 🚌 بداية المنظومة الأصلية بعد تخطي جدار الحماية
+# ====================================================
 
 # SHEET_ID الثابت العام للمنظومة
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
@@ -18,52 +51,24 @@ def load_data_public(sheet_name):
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
     
-    # ميزة الفرز الأبجدي التلقائي حسب الاسم لترتيب الكشوفات هندسياً
     col_name = next((c for c in data.columns if 'الاسم' in c or 'اسم' in c), None)
     if col_name and sheet_name == 'Form responses 1':
         data = data.sort_values(by=col_name).reset_index(drop=True)
     return data
 
-# دالة هندسية مصححة لتوليد ملف PDF احترافي للجدول مع إضافة الترقيم المتسلسل المُرتب
-def convert_df_to_pdf(df_to_export, title_text):
+def convert_df_to_excel(df_to_export):
     keep_cols = [c for c in df_to_export.columns if any(k in c for k in ['الاسم', 'الهاتف', 'رقم', 'العدد', 'أفراد', 'الإقامة', 'فندق', 'انطلاق', 'مكان'])]
     if not keep_cols:
         keep_cols = df_to_export.columns[:5]
     
     df_clean = df_to_export[keep_cols].copy()
-    
-    # إضافة العمود التسلسلي المنظم داخل الـ PDF
     df_clean.insert(0, '#', range(1, len(df_clean) + 1))
     
-    fig, ax = plt.subplots(figsize=(11, len(df_clean) * 0.4 + 2))
-    ax.axis('tight')
-    ax.axis('off')
-    
-    plt.title(title_text, fontsize=16, weight='bold', pad=20, loc='center')
-    
-    table = ax.table(
-        cellText=df_clean.values, 
-        colLabels=df_clean.columns, 
-        cellLoc='center', 
-        loc='center'
-    )
-    
-    table.auto_set_font_size(False)
-    table.scale(1.2, 1.5)
-    
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_text_props(weight='bold', color='white', fontsize=11)
-            cell.set_facecolor('#1d3557')
-        else:
-            cell.set_text_props(fontsize=10)
-            
-    buf = BytesIO()
-    plt.savefig(buf, format='pdf', bbox_inches='tight')
-    plt.close(fig)
-    return buf.getvalue()
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_clean.to_excel(writer, index=False, sheet_name='الكشف الرسمي')
+    return output.getvalue()
 
-# دالة مساعدة لعرض الجدول في Streamlit مع إضافة عمود التسلسل (#) في البداية بدلاً من الـ index القديم
 def display_styled_dataframe(dataframe):
     df_display = dataframe.copy()
     df_display.insert(0, '#', range(1, len(df_display) + 1))
@@ -71,6 +76,7 @@ def display_styled_dataframe(dataframe):
 
 # 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
 st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
+
 page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💬 مركز مراسلة حالات الزبائن",
     "🔍 استعلام وبطاقة حجز عميل",
@@ -82,7 +88,31 @@ page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💰 التقارير المالية والإيرادات"
 ])
 
-if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة"):
+st.sidebar.markdown("---")
+
+# 🛠️ مربع تغيير الباسورد الذكي داخل السايدبار
+st.sidebar.markdown("### ⚙️ إعدادات الأمان")
+with st.sidebar.expander("🔐 تغيير كلمة المرور"):
+    current_pass = st.text_input("كلمة المرور الحالية:", type="password", key="cur_pass")
+    new_pass = st.text_input("كلمة المرور الجديدة:", type="password", key="new_pass")
+    
+    if st.button("🔄 تحديث كلمة المرور"):
+        if current_pass == st.session_state['master_password']:
+            if new_pass.strip() != "":
+                st.session_state['master_password'] = new_pass
+                st.success("✅ تم تغيير كلمة المرور بنجاح!")
+            else:
+                st.error("❌ لا يمكن تعيين كلمة مرور فارغة.")
+        else:
+            st.error("❌ كلمة المرور الحالية غير صحيحة.")
+
+st.sidebar.markdown("---")
+# زر خروج آمن للموظف في القائمة الجانبية
+if st.sidebar.button("🔒 تسجيل الخروج الآمن", use_container_width=True):
+    st.session_state['authenticated'] = False
+    st.rerun()
+
+if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة", use_container_width=True):
     try:
         st.session_state['df'] = load_data_public('Form responses 1')
         st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
@@ -261,7 +291,7 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات.")
 
 # ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر الـ PDF الكلي
+# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر Excel
 # ----------------------------------------------------
 elif page == "📋 الكشف الكلي لجميع الركاب":
     st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
@@ -270,13 +300,13 @@ elif page == "📋 الكشف الكلي لجميع الركاب":
         df = st.session_state['df']
         st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
         
-        pdf_total_data = convert_df_to_pdf(df, "الكشف الكلي والشامل لجميع الركاب - شركة قصر الهناء")
-        st.download_button("📥 تحميل الكشف العام كاملاً كملف PDF", data=pdf_total_data, file_name="Total_Trip_Passengers.pdf", mime="application/pdf")
+        excel_data = convert_df_to_excel(df)
+        st.download_button("📥 تحميل الكشف العام كاملاً كملف Excel للمنظومة", data=excel_data, file_name="Total_Passengers.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         
         display_styled_dataframe(df)
 
 # ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا + زر الـ PDF
+# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا + زر Excel
 # ----------------------------------------------------
 elif page == "🏢 كشف نزلاء فندق قورينا":
     st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
@@ -288,13 +318,13 @@ elif page == "🏢 كشف نزلاء فندق قورينا":
             df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
             st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
             
-            pdf_data = convert_df_to_pdf(df_quryna, "كشف نزلاء فندق قورينا - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للفندق", data=pdf_data, file_name="Quryna_Hotel_Guests.pdf", mime="application/pdf")
+            excel_data = convert_df_to_excel(df_quryna)
+            st.download_button("📥 تحميل الكشف كملف Excel لفندق قورينا", data=excel_data, file_name="Quryna_Hotel_Guests.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
             display_styled_dataframe(df_quryna)
 
 # ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات + زر الـ PDF
+# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات + زر Excel
 # ----------------------------------------------------
 elif page == "🌲 كشف نزلاء منتجع شحات":
     st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
@@ -306,13 +336,13 @@ elif page == "🌲 كشف نزلاء منتجع شحات":
             df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
             st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
             
-            pdf_data = convert_df_to_pdf(df_shahat, "كشف نزلاء منتجع شحات - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للمنتجع", data=pdf_data, file_name="Shahat_Resort_Guests.pdf", mime="application/pdf")
+            excel_data = convert_df_to_excel(df_shahat)
+            st.download_button("📥 تحميل الكشف كملف Excel لمنتجع شحات", data=excel_data, file_name="Shahat_Resort_Guests.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
             display_styled_dataframe(df_shahat)
 
 # ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب + زر الـ PDF
+# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب + زر Excel
 # ----------------------------------------------------
 elif page == "🟢 كشف ركاب طرابلس والغرب":
     st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
@@ -324,13 +354,13 @@ elif page == "🟢 كشف ركاب طرابلس والغرب":
             df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
             
-            pdf_data = convert_df_to_pdf(df_tripoli, "كشف ركاب باص طرابلس والغرب - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للحافلة", data=pdf_data, file_name="Tripoli_Bus_Passengers.pdf", mime="application/pdf")
+            excel_data = convert_df_to_excel(df_tripoli)
+            st.download_button("📥 تحميل الكشف كملف Excel للحافلة", data=excel_data, file_name="Tripoli_Bus_Passengers.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
             display_styled_dataframe(df_tripoli)
 
 # ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية + زر الـ PDF
+# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية + زر Excel
 # ----------------------------------------------------
 elif page == "🔵 كشف ركاب المنطقة الشرقية":
     st.title("🔵 كشف ركاب المنطقة الشرقية")
@@ -342,8 +372,8 @@ elif page == "🔵 كشف ركاب المنطقة الشرقية":
             df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
             
-            pdf_data = convert_df_to_pdf(df_east, "كشف ركاب المنطقة الشرقية - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للشرقية", data=pdf_data, file_name="Eastern_Region_Passengers.pdf", mime="application/pdf")
+            excel_data = convert_df_to_excel(df_east)
+            st.download_button("📥 تحميل الكشف كملف Excel لركاب الشرقية", data=excel_data, file_name="Eastern_Region_Passengers.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
             display_styled_dataframe(df_east)
 
