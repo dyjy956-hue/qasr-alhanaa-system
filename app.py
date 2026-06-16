@@ -9,21 +9,28 @@ from io import BytesIO
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
 # ====================================================
-# 🔒 نظام الحماية
+# 🔒 نظام الحماية والأمان المطور
 # ====================================================
 if 'master_password' not in st.session_state: st.session_state['master_password'] = "Samir2026"
 if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
 
 if not st.session_state['authenticated']:
     st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
-    if st.button("🔓 تسجيل الدخول"):
-        if st.text_input("كلمة المرور:", type="password") == st.session_state['master_password']:
-            st.session_state['authenticated'] = True
-            st.rerun()
+    st.markdown("---")
+    col1, col2 = st.columns([1, 2])
+    with col1: st.image("https://cdn-icons-png.flaticon.com/512/3064/3064155.png", width=150)
+    with col2:
+        st.write("### مرحباً بك في لوحة تحكم الإدارة")
+        user_password = st.text_input("الرجاء إدخال كلمة مرور المنظومة للدخول:", type="password")
+        if st.button("🔓 تسجيل الدخول"):
+            if user_password == st.session_state['master_password']:
+                st.session_state['authenticated'] = True
+                st.rerun()
+            else: st.error("❌ كلمة المرور غير صحيحة.")
     st.stop()
 
 # ====================================================
-# الدوال
+# الدوال الأساسية
 # ====================================================
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
@@ -33,55 +40,78 @@ def load_data_public(sheet_name):
     data.columns = data.columns.str.strip()
     return data
 
-def get_wa_intent(phone, text):
-    p = str(phone).replace('.0','').replace(' ','').replace('+','').replace('-','')
-    if len(p) == 9 and p.startswith('9'): p = "218" + p
-    elif len(p) == 10 and p.startswith('09'): p = "218" + p[1:]
-    return f"intent://send?phone={p}&text={urllib.parse.quote(text)}#Intent;scheme=smsto;package=com.whatsapp;action=android.intent.action.SENDTO;end"
+def convert_df_to_excel(df_to_export):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_to_export.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
+
+def display_styled_dataframe(df):
+    st.dataframe(df, use_container_width=True)
 
 # ====================================================
-# الصفحة الأولى: مركز المراسلات (مع الأزرار الخمسة)
+# إدارة البيانات في الجلسة
 # ====================================================
 if 'df' not in st.session_state: st.session_state['df'] = load_data_public('Form responses 1')
-page = st.sidebar.radio("القائمة:", ["💬 مركز مراسلة حالات الزبائن", "🔍 استعلام وبطاقة حجز عميل", "📋 الكشف الكلي"])
+if 'df_finance' not in st.session_state: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
 
+# ====================================================
+# القائمة الجانبية
+# ====================================================
+st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
+page = st.sidebar.radio("انتقل إلى القائمة:", [
+    "💬 مركز مراسلة حالات الزبائن", "🔍 استعلام وبطاقة حجز عميل", "📋 الكشف الكلي لجميع الركاب",
+    "🏢 كشف نزلاء فندق قورينا", "🌲 كشف نزلاء منتجع شحات", "🟢 كشف ركاب طرابلس والغرب", 
+    "🔵 كشف ركاب المنطقة الشرقية", "💰 التقارير المالية والإيرادات"
+])
+
+# إعدادات الأمان الجانبية
+with st.sidebar.expander("🔐 تغيير كلمة المرور"):
+    curr = st.text_input("الحالية:", type="password")
+    new_p = st.text_input("الجديدة:", type="password")
+    if st.button("🔄 تحديث"):
+        if curr == st.session_state['master_password']: st.session_state['master_password'] = new_p; st.success("✅")
+        else: st.error("❌")
+
+if st.sidebar.button("🔒 تسجيل الخروج"): st.session_state['authenticated'] = False; st.rerun()
+
+# ====================================================
+# منطق الصفحات
+# ====================================================
 if page == "💬 مركز مراسلة حالات الزبائن":
     df = st.session_state['df']
     col_name = next((c for c in df.columns if 'الاسم' in c), None)
     col_phone = next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c), None)
     
     if col_name and col_phone:
-        selected_user = st.selectbox("اختر العميل:", df[col_name].dropna().tolist())
-        u = df[df[col_name] == selected_user].iloc[0]
+        user = st.selectbox("اختر الزبون:", df[col_name].dropna().tolist())
+        u = df[df[col_name] == user].iloc[0]
+        phone = str(u[col_phone]).replace('.0','')
         
-        # رسائل الواتساب
-        msg_c = f"السلام عليكم، تم استلام بياناتكم لرحلة 2026."
-        msg_p = f"تم تأكيد حجزكم بنجاح."
-        msg_s = f"تم تأكيد السداد المالي بنجاح."
-        msg_b = f"تفاصيل رحلة الغد..."
-        msg_x = f"تم إلغاء تسجيلكم بنجاح."
+        def get_url(txt): return f"intent://send?phone={phone}&text={urllib.parse.quote(txt)}#Intent;scheme=smsto;package=com.whatsapp;action=android.intent.action.SENDTO;end"
         
-        st.write("### 📲 خيارات المراسلة:")
         c1, c2, c3, c4, c5 = st.columns(5)
-        with c1: st.markdown(f'<a href="{get_wa_intent(u[col_phone], msg_c)}" target="_blank"><button style="width:100%; background:#2b5c8f; color:white; border:none; padding:10px; border-radius:5px;">🔵 1. استلام</button></a>', unsafe_allow_html=True)
-        with c2: st.markdown(f'<a href="{get_wa_intent(u[col_phone], msg_p)}" target="_blank"><button style="width:100%; background:#1d3557; color:white; border:none; padding:10px; border-radius:5px;">🏁 2. تأكيد</button></a>', unsafe_allow_html=True)
-        with c3: st.markdown(f'<a href="{get_wa_intent(u[col_phone], msg_s)}" target="_blank"><button style="width:100%; background:#25D366; color:white; border:none; padding:10px; border-radius:5px;">🟢 3. سداد</button></a>', unsafe_allow_html=True)
-        with c4: st.markdown(f'<a href="{get_wa_intent(u[col_phone], msg_b)}" target="_blank"><button style="width:100%; background:#ff9800; color:white; border:none; padding:10px; border-radius:5px;">🚌 4. باص</button></a>', unsafe_allow_html=True)
-        with c5: st.markdown(f'<a href="{get_wa_intent(u[col_phone], msg_x)}" target="_blank"><button style="width:100%; background:#d32f2f; color:white; border:none; padding:10px; border-radius:5px;">🔴 5. إلغاء</button></a>', unsafe_allow_html=True)
+        with c1: st.markdown(f'<a href="{get_url("تم استلام طلبكم")}" target="_blank"><button style="width:100%">🔵 استلام</button></a>', unsafe_allow_html=True)
+        with c2: st.markdown(f'<a href="{get_url("تم التأكيد")}" target="_blank"><button style="width:100%">🏁 تأكيد</button></a>', unsafe_allow_html=True)
+        with c3: st.markdown(f'<a href="{get_url("تم السداد")}" target="_blank"><button style="width:100%">🟢 سداد</button></a>', unsafe_allow_html=True)
+        with c4: st.markdown(f'<a href="{get_url("بيانات الباص")}" target="_blank"><button style="width:100%">🚌 باص</button></a>', unsafe_allow_html=True)
+        with c5: st.markdown(f'<a href="{get_url("تم الإلغاء")}" target="_blank"><button style="width:100%">🔴 إلغاء</button></a>', unsafe_allow_html=True)
 
-# ----------------------------------------------------
-# 🔍 الصفحة الثانية: بطاقة العميل مع التكلفة
-# ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
-    col_name = next((c for c in st.session_state['df'].columns if 'الاسم' in c), None)
-    search_user = st.selectbox("🎯 اختر العميل:", ["-- اختر --"] + st.session_state['df'][col_name].dropna().tolist())
-    if search_user != "-- اختر --":
-        u = st.session_state['df'][st.session_state['df'][col_name] == search_user].iloc[0]
-        col_cost = next((c for c in st.session_state['df'].columns if 'تكلفة' in c or 'مبلغ' in c or 'سعر' in c), 'غير مسجل')
-        st.markdown(f"""<div style="background:#f8f9fa; padding:20px; border-radius:8px;">
-            <h3>🎫 بطاقة الحجز</h3>
-            <p><b>👤 الاسم:</b> {u.get(col_name)}</p>
-            <div style="background:#fff3cd; padding:10px; border-radius:5px;">
-                <p style="font-size:18px; color:#856404;"><b>💰 إجمالي التكلفة: {u.get(col_cost, 'غير مسجل')}</b></p>
-            </div>
-        </div>""", unsafe_allow_html=True)
+    df = st.session_state['df']
+    col_name = next((c for c in df.columns if 'الاسم' in c), None)
+    col_cost = next((c for c in df.columns if 'تكلفة' in c or 'مبلغ' in c), None)
+    user = st.selectbox("🎯 اختر العميل:", ["--"] + df[col_name].dropna().tolist())
+    if user != "--":
+        u = df[df[col_name] == user].iloc[0]
+        st.write(f"### 💰 التكلفة: {u.get(col_cost, 'غير محدد')}")
+
+elif "كشف" in page:
+    df = st.session_state['df']
+    if "قورينا" in page: df = df[df.astype(str).apply(lambda x: x.str.contains("قورينا")).any(axis=1)]
+    elif "شحات" in page: df = df[df.astype(str).apply(lambda x: x.str.contains("شحات")).any(axis=1)]
+    st.download_button("📥 تحميل Excel", convert_df_to_excel(df), "data.xlsx")
+    display_styled_dataframe(df)
+
+elif page == "💰 التقارير المالية والإيرادات":
+    st.dataframe(st.session_state['df_finance'])
