@@ -94,7 +94,6 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                # تحديث نص رسالة تأكيد الحجز لتطابق الشيت تماماً بناءً على المعادلة المرسلة
                 msg_confirm = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
                     f"مرحباً بك أخي/أختي الفاضلة المعزز في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
@@ -107,6 +106,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                     f"*شكراً لثقتكم باختيار قصر الهناء، ونتمنى لكم رحلة ممتعة معنا مقدماً!* 🏔️ وبإذن الله رحلة مباركة للجميع."
                 )
                 
+                # تحديث نص رسالة التأكيد النهائي لتطابق الشيت تماماً بناءً على المعادلة المرسلة
                 msg_remind_pay = (
                     f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
                     f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
@@ -162,9 +162,9 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
-                # تغيير اسم الزبون الأول إلى "تأكيد الحجز" مع الإبقاء على ميزة تحويل الحركة مباشرة للتطبيق
                 with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. تأكيد الحجز</button></a>', unsafe_allow_html=True)
-                with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
+                # تغيير الزر الثاني إلى "التأكيد النهائي" مع الإبقاء على ميزة فتح التطبيق مباشرة
+                with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. التأكيد النهائي</button></a>', unsafe_allow_html=True)
                 with col3: st.markdown(f'<a href="{url_paid}"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
                     if "الشرقية" not in u_reg:
@@ -224,7 +224,7 @@ elif page == "📋 الكشف الكلي لجميع الركاب":
     
     if 'df' in st.session_state:
         df = st.session_state['df']
-        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
+        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين in المنظومة: {df.shape[0]} مسافر")
         st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
