@@ -1,4 +1,7 @@
- import streamlit as st
+
+
+# تعليق لحماية السطر الأول من المسافات التلقائية
+import streamlit as st
 import pandas as pd
 import urllib.parse
 
@@ -61,4 +64,4 @@ if 'df' in st.session_state:
             wa_url = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg)}"
             
             st.image("https://images.squarespace-cdn.com/content/v1/660dae564d262963351f7bb5/c209861f-9da3-42e5-ad24-4f59e984f49b/1000150093.jpg", width=350, caption="صورة مسار الجبل الأخضر المرفقة بالرسالة")
-            st.markdown(f'<a href="{wa_url}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold
+            st.markdown(f'<a href="{wa_url}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">🟢 إرسال التأكيد + الصورة بالواتساب</button></a>', unsafe_allow_html=True)
