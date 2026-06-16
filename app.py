@@ -6,8 +6,6 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-import matplotlib.pyplot as plt
-from io import BytesIO
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
@@ -19,57 +17,7 @@ def load_data_public(sheet_name):
     url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
-    
-    # ميزة الفرز الأبجدي التلقائي حسب الاسم لترتيب الكشوفات هندسياً
-    col_name = next((c for c in data.columns if 'الاسم' in c or 'اسم' in c), None)
-    if col_name and sheet_name == 'Form responses 1':
-        data = data.sort_values(by=col_name).reset_index(drop=True)
     return data
-
-# دالة هندسية مصححة لتوليد ملف PDF احترافي للجدول مع إضافة الترقيم المتسلسل المُرتب
-def convert_df_to_pdf(df_to_export, title_text):
-    keep_cols = [c for c in df_to_export.columns if any(k in c for k in ['الاسم', 'الهاتف', 'رقم', 'العدد', 'أفراد', 'الإقامة', 'فندق', 'انطلاق', 'مكان'])]
-    if not keep_cols:
-        keep_cols = df_to_export.columns[:5]
-    
-    df_clean = df_to_export[keep_cols].copy()
-    
-    # إضافة العمود التسلسلي المنظم داخل الـ PDF
-    df_clean.insert(0, '#', range(1, len(df_clean) + 1))
-    
-    fig, ax = plt.subplots(figsize=(11, len(df_clean) * 0.4 + 2))
-    ax.axis('tight')
-    ax.axis('off')
-    
-    plt.title(title_text, fontsize=16, weight='bold', pad=20, loc='center')
-    
-    table = ax.table(
-        cellText=df_clean.values, 
-        colLabels=df_clean.columns, 
-        cellLoc='center', 
-        loc='center'
-    )
-    
-    table.auto_set_font_size(False)
-    table.scale(1.2, 1.5)
-    
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_text_props(weight='bold', color='white', fontsize=11)
-            cell.set_facecolor('#1d3557')
-        else:
-            cell.set_text_props(fontsize=10)
-            
-    buf = BytesIO()
-    plt.savefig(buf, format='pdf', bbox_inches='tight')
-    plt.close(fig)
-    return buf.getvalue()
-
-# دالة مساعدة لعرض الجدول في Streamlit مع إضافة عمود التسلسل (#) في البداية بدلاً من الـ index القديم
-def display_styled_dataframe(dataframe):
-    df_display = dataframe.copy()
-    df_display.insert(0, '#', range(1, len(df_display) + 1))
-    st.dataframe(df_display.set_index('#'), use_container_width=True)
 
 # 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
 st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
@@ -84,6 +32,7 @@ page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💰 التقارير المالية والإيرادات"
 ])
 
+# زر التحديث العام في القائمة الجانبية ليكون متاحاً في كل الصفحات
 if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة"):
     try:
         st.session_state['df'] = load_data_public('Form responses 1')
@@ -92,13 +41,18 @@ if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة")
     except Exception as e:
         st.sidebar.error(f"تأكد من إعدادات مشاركة الشيت: {e}")
 
+# تأمين وجود البيانات في session_state لتفادي أخطاء أول تشغيل
 if 'df' not in st.session_state:
-    try: st.session_state['df'] = load_data_public('Form responses 1')
-    except: pass
+    try:
+        st.session_state['df'] = load_data_public('Form responses 1')
+    except:
+        pass
 
 if 'df_finance' not in st.session_state:
-    try: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
-    except: pass
+    try:
+        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+    except:
+        pass
 
 # ----------------------------------------------------
 # 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
@@ -133,84 +87,72 @@ if page == "💬 مركز مراسلة حالات الزبائن":
             
             if selected_user:
                 user_data = df_filtered[df_filtered[col_name] == selected_user].iloc[0]
+                
                 u_name = user_data[col_name]
                 u_phone = user_data[col_phone]
                 u_count = user_data[col_count] if col_count else "غير محدد"
                 u_hotel = user_data[col_hotel] if col_hotel else "غير محدد"
                 u_reg = str(user_data[col_region]) if col_region else ""
+                
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                msg_confirm = f"""السلام عليكم ورحمة الله وبركاته،
-
-مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹
-
-تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨
-
-📌 *الاسم:* {u_name}
-👥 *العدد:* {u_count} أشخاص
-🏨 *الإقامة:* {u_hotel}
-📍 *مكان الانطلاق:* {u_reg}
-
-💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.
-
-*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"""
+                msg_confirm = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
+                    f"تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨\n\n"
+                    f"📌 *الاسم:* {u_name}\n"
+                    f"👥 *العدد:* {u_count} أشخاص\n"
+                    f"🏨 *الإقامة:* {u_hotel}\n"
+                    f"📍 *مكان الانطلاق:* {u_reg}\n\n"
+                    f"💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.\n\n"
+                    f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
+                )
                 
-                msg_remind_pay = f"""مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨
-
-✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌
-
-💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:
-يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.
-
-📍 عنوان الشركة: طرابلس - الظهرة.
-⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.
-
-📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.
-
-نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنسى معكم! دمت بخير وفي أمان الله 🌹
-شركة قصر الهناء للاستثمار السياحي."""
+                msg_remind_pay = (
+                    f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
+                    f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
+                    f"💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:\n"
+                    f"يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.\n\n"
+                    f"📍 عنوان الشركة: طرابلس - الظهرة.\n"
+                    f"⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.\n\n"
+                    f"📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.\n\n"
+                    f"نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنسى معكم! دمت بخير وفي أمان الله 🌹\n"
+                    f"شركة قصر الهناء للاستثمار السياحي."
+                )
                 
-                msg_paid = f"""السلام عليكم ورحمة الله وبركاته،
-
-الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟
-
-يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳
-
-👥 *عدد المقاعد المؤكدة:* {u_count}
-🏨 *ترتيبات الإقامة:* {u_hotel}
-
-جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨
-
-*شكراً لكم - إدارة شركة قصر الهناء* 🌹"""
+                msg_paid = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟\n\n"
+                    f"يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳\n\n"
+                    f"👥 *عدد المقاعد المؤكدة:* {u_count}\n"
+                    f"🏨 *ترتيبات الإقامة:* {u_hotel}\n\n"
+                    f"جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨\n\n"
+                    f"*شكراً لكم - إدارة شركة قصر الهناء* 🌹"
+                )
                 
-                msg_tripoli_bus = f"""السلام عليكم ورحمة الله وبركاته،
-
-ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️
-نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.
-
-إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:
-📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]
-⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]
-🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً
-
-👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]
-📞 *رقم هاتف السائق:* [الرقم]
-
-⚠️ *ملاحظات هامة جداً للرحلة:*
-1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.
-2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.
-
-*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"""
+                msg_tripoli_bus = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
+                    f"نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.\n\n"
+                    f"إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:\n"
+                    f"📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]\n"
+                    f"⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]\n"
+                    f"🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً\n\n"
+                    f"👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]\n"
+                    f"📞 *رقم هاتف السائق:* [الرقم]\n\n"
+                    f"⚠️ *ملاحظات هامة جداً للرحلة:*\n"
+                    f"1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.\n"
+                    f"2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.\n\n"
+                    f"*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
+                )
                 
-                msg_cancel = f"""السلام عليكم ورحمة الله وبركاته،
-
-الأستاذ(ة): *{u_name}* 🌹
-
-نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌
-
-نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
-
-*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"""
+                msg_cancel = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"الأستاذ(ة): *{u_name}* 🌹\n\n"
+                    f"نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌\n\n"
+                    f"نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.\n\n"
+                    f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
+                )
 
                 url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
                 url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
@@ -232,7 +174,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 with col5: st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
+# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل (الجديدة)
 # ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
     st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
@@ -248,6 +190,8 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             
             if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
+                
+                # إنشاء تصميم أنيق لعرض التفاصيل كبطاقة
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
                     <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
@@ -259,102 +203,113 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
                     <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                st.markdown("#### 📄 الصف الكامل للبيانات كما ورد في الشيت:")
+                st.dataframe(pd.DataFrame([user_full_data]), use_container_width=True)
         else:
-            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات.")
+            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات للبحث به.")
 
 # ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر الـ PDF الكلي
+# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب
 # ----------------------------------------------------
 elif page == "📋 الكشف الكلي لجميع الركاب":
     st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
+    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
     st.markdown("---")
+    
     if 'df' in st.session_state:
         df = st.session_state['df']
         st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
-        
-        pdf_total_data = convert_df_to_pdf(df, "الكشف الكلي والشامل لجميع الركاب - شركة قصر الهناء")
-        st.download_button("📥 تحميل الكشف العام كاملاً كملف PDF", data=pdf_total_data, file_name="Total_Trip_Passengers.pdf", mime="application/pdf")
-        
-        display_styled_dataframe(df)
+        st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا + زر الـ PDF
+# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا
 # ----------------------------------------------------
 elif page == "🏢 كشف نزلاء فندق قورينا":
     st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
+    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
     st.markdown("---")
+    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
+        
         if col_hotel:
             df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
             st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_quryna, "كشف نزلاء فندق قورينا - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للفندق", data=pdf_data, file_name="Quryna_Hotel_Guests.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_quryna)
+            st.dataframe(df_quryna, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات + زر الـ PDF
+# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات
 # ----------------------------------------------------
 elif page == "🌲 كشف نزلاء منتجع شحات":
     st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
+    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
     st.markdown("---")
+    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
+        
         if col_hotel:
             df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
             st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_shahat, "كشف نزلاء منتجع شحات - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للمنتجع", data=pdf_data, file_name="Shahat_Resort_Guests.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_shahat)
+            st.dataframe(df_shahat, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب + زر الـ PDF
+# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
 # ----------------------------------------------------
 elif page == "🟢 كشف ركاب طرابلس والغرب":
     st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
+    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
     st.markdown("---")
+    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
         if col_region:
             df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_tripoli, "كشف ركاب باص طرابلس والغرب - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للحافلة", data=pdf_data, file_name="Tripoli_Bus_Passengers.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_tripoli)
+            st.dataframe(df_tripoli, use_container_width=True)
+        else:
+            st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية + زر الـ PDF
+# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية
 # ----------------------------------------------------
 elif page == "🔵 كشف ركاب المنطقة الشرقية":
     st.title("🔵 كشف ركاب المنطقة الشرقية")
+    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
     st.markdown("---")
+    
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
         if col_region:
             df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
             st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_east, "كشف ركاب المنطقة الشرقية - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للشرقية", data=pdf_data, file_name="Eastern_Region_Passengers.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_east)
+            st.dataframe(df_east, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
 
 # ----------------------------------------------------
 # 💰 الصفحة الثامنة: التقارير المالية والإيرادات
 # ----------------------------------------------------
 elif page == "💰 التقارير المالية والإيرادات":
     st.title("💰 الإيرادات والتقارير المالية للشركة")
+    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
     st.markdown("---")
+
     if 'df_finance' in st.session_state:
         df_finance = st.session_state['df_finance']
+        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
         st.dataframe(df_finance, use_container_width=True)
+        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
+    else:
+        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب Tقرير المالي.")
