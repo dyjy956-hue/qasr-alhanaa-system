@@ -4,11 +4,7 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-import numpy as np  # استيراد المكتبة هنا بشكل عام لمنع حدوث NameError
-try:
-    import cv2
-except ImportError:
-    pass
+import numpy as np
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
@@ -33,7 +29,7 @@ page = st.sidebar.radio("انتقل إلى القائمة:", [
     "🟢 كشف ركاب طرابلس والغرب", 
     "🔵 كشف ركاب المنطقة الشرقية", 
     "💰 التقارير المالية والإيرادات",
-    "📲 تسجيل حضور العائلات بالباركود"  # الميزة العالمية المضافة
+    "📲 تسجيل حضور العائلات بالباركود"
 ])
 
 # زر التحديث العام في القائمة الجانبية ليكون متاحاً في كل الصفحات
@@ -89,7 +85,7 @@ if page == "💬 - مركز مراسلة حالات الزبائن":
             df_filtered = df.copy()
             
         if not col_name or not col_phone:
-            st.warning("⚠️ للمراسلة: تأكد من وجود عمود يحتوي على 'الاسم' وعمود يحتوي على 'رقم الهاتف' في الشيت.")
+            st.warning("⚠️ للمراسلة: تأكد من وجود عمود يحتوي على 'الاسم' وعمود يحتوي على 'رقم الهاتف' in الشيت.")
         else:
             selected_user = st.selectbox("اختر اسم الزبون المراد مراسلته عبر الواتساب:", df_filtered[col_name].dropna().tolist())
             
@@ -104,7 +100,6 @@ if page == "💬 - مركز مراسلة حالات الزبائن":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                # توليد رابط الباركود الفريد لكل عائلة تلقائياً
                 qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={phone_str}"
                 
                 msg_confirm = (
@@ -191,7 +186,7 @@ if page == "💬 - مركز مراسلة حالات الزبائن":
 # 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
 # ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
-    st.title("🔍 نظام الاستعلام الفორი وعرض بيانات الحجز")
+    st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
     st.subheader("ابحث باسم العميل لاستخراج بطاقة الحجز الفندقية واللوجستية الكاملة")
     st.markdown("---")
     
@@ -343,26 +338,20 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
         
         if col_name and col_phone:
-            # تجهيز القوائم والبيانات الحية بناء على ذاكرة النظام المؤقتة
             df['clean_phone'] = df[col_phone].astype(str).str.replace('.0', '', regex=False).str.strip()
             
-            # تصنيف العائلات (حاضر / متبقي)
             df_attended = df[df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
             df_missing = df[~df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
             
-            # عرض العدادات والإحصائيات الحية في الأعلى للمشرف
             c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric("👥 إجمالي العائلات بالرحلة", len(df))
-            with c2:
-                st.metric("🟢 عائلات تم تسجيل حضورها", len(df_attended))
-            with c3:
-                st.metric("🔴 عائلات متبقية ومتأخرة", len(df_missing))
+            with c1: st.metric("👥 إجمالي العائلات بالرحلة", len(df))
+            with c2: st.metric("🟢 عائلات تم تسجيل حضورها", len(df_attended))
+            with c3: st.metric("🔴 عائلات متبقية ومتأخرة", len(df_missing))
                 
             st.markdown("---")
             
-            # إنشاء خيارين للمشرف: مسح بالباركود أو تسجيل يدوي سريع لضمان عدم التعطيل
-            scan_mode = st.radio("🛠️ اختر طريقة تسجيل صعود العائلة:", ["📸 استخدام كاميرا الباركود", "✏️ تسجيل يدوي سريع (اسم / هاتف)"])
+            # حماية الكود من الانهيار والاعتماد الكلي على التسجيل اليدوي كخيار أول أمن ومجرب
+            scan_mode = st.radio("🛠️ اختر طريقة تسجيل صعود العائلة:", ["✏️ تسجيل يدوي سريع (اسم / هاتف)", "📸 استخدام كاميرا الباركود"])
             
             scanned_phone = None
             
@@ -372,10 +361,11 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                 
                 if img_file is not None:
                     try:
+                        # استيراد المكتبة هنا بشكل محلي ومحمي لمنع توقف التطبيق
+                        import cv2
                         file_bytes = np.asarray(bytearray(img_file.read()), dtype=np.uint8)
                         opencv_img = cv2.imdecode(file_bytes, 1)
                         
-                        # تحسين الصورة لتسهيل قراءتها (أبيض وأسود لزيادة التباين المانع للأخطاء)
                         gray = cv2.cvtColor(opencv_img, cv2.COLOR_BGR2GRAY)
                         detector = cv2.QRCodeDetector()
                         data, bbox, straight_qrcode = detector.detectAndDecode(gray)
@@ -383,17 +373,15 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                         if data:
                             scanned_phone = str(data).strip()
                         else:
-                            # محاولة بديلة سريعة بالصورة الأصلية
                             data, bbox, straight_qrcode = detector.detectAndDecode(opencv_img)
                             if data:
                                 scanned_phone = str(data).strip()
                             else:
-                                st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. تأكد من تقريب الكاميرا وضبط الإضاءة، أو استخدم خيار 'التسجيل اليدوي السريع' فوراً كبديل.")
+                                st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. يرجى ضبط الإضاءة، أو استخدم خيار 'التسجيل اليدوي السريع' فوراً لتوفير الوقت.")
                     except Exception as e:
-                        st.error(f"خطأ أثناء معالجة الصورة: {e}")
+                        st.error(f"تنبيه: الكاميرا تحتاج لتثبيت حزم إضافية على السيرفر. يرجى استخدام 'التسجيل اليدوي السريع' الآن لتسير أعمالكم بنجاح.")
             
             else:
-                # الحل البديل: قائمة ذكية ومنسدلة تظهر الأسماء المتأخرة فقط لسرعة فائقة في الإنجاز
                 st.write("### ✏️ اختر اسم العائلة المتواجدة أمامك الآن لتسجيلها:")
                 missing_list = ["-- اختر اسم العائلة من القائمة لتسجيل حضورها فوراً --"] + df_missing[col_name].dropna().tolist()
                 selected_missing = st.selectbox("قائمة العائلات المتأخرة:", missing_list)
@@ -403,7 +391,6 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                     if not user_row_manual.empty:
                         scanned_phone = user_row_manual.iloc[0]['clean_phone']
             
-            # معالجة الرقم المكتشف وعرض الخيارات بناءً عليه
             if scanned_phone:
                 user_row = df[df['clean_phone'] == scanned_phone]
                 
@@ -419,11 +406,10 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # تجهيز وإرسال رسالة الترحيب للراكب عند الضغط على الزر
                     msg_welcome = f"تم تسجيل صعود عائلتكم الكريمة إلى الحافلة بنجاح! 🚌✨\n\nشركة قصر الهناء تتمنى لكم رحلة سعيدة وممتعة إلى الجبل الأخضر. رافقتكم السلامة 🌹"
                     url_welcome = f"whatsapp://send?phone={scanned_phone}&text={urllib.parse.quote(msg_welcome)}"
                     
-                    if st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;">📲 اضغط هنا لتأكيد الصعود وإرسال رسالة الواتساب للراك</button></a>', unsafe_allow_html=True):
+                    if st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;">📲 اضغط هنا لتأكيد الصعود وإرسال رسالة الواتساب للراكب</button></a>', unsafe_allow_html=True):
                         if scanned_phone not in st.session_state['attended_phones']:
                             st.session_state['attended_phones'].append(scanned_phone)
                             st.rerun()
@@ -432,7 +418,6 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
             
             st.markdown("---")
             
-            # عرض الجداول الحية للمشرف (المتبقين والحاضرين) مع إمكانية إعلام المتأخرين
             col_tab1, col_tab2 = st.tabs(["🔴 العائلات المتبقية (لم تصل بعد)", "🟢 العائلات التي صعدت الحافلة"])
             
             with col_tab1:
