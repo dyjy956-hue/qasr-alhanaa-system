@@ -94,16 +94,17 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
+                # تحديث نص رسالة تأكيد الحجز لتطابق الشيت تماماً بناءً على المعادلة المرسلة
                 msg_confirm = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
-                    f"مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
-                    f"تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨\n\n"
-                    f"📌 *الاسم:* {u_name}\n"
-                    f"👥 *العدد:* {u_count} أشخاص\n"
-                    f"🏨 *الإقامة:* {u_hotel}\n"
+                    f"مرحباً بك أخي/أختي الفاضلة المعزز في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
+                    f"يسعدنا جداً إبلاغكم بأنه قد تم استلام بيانات التسجيل الخاصة بكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨\n\n"
+                    f"📌 *الاسم المسجل:* {u_name}\n"
+                    f"👥 *عدد أفراد العائلة:* {u_count} أشخاص\n"
+                    f"🏨 *محل الإقامة المختار:* {u_hotel}\n"
                     f"📍 *مكان الانطلاق:* {u_reg}\n\n"
-                    f"💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.\n\n"
-                    f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
+                    f"💳 يرجى العلم أن الحجز يعتبر *مبدئياً* حتى يتم تأكيد السداد المالي (سواء نقداً في مقر الشركة أو عبر الحساب المصرفي)، وسيقوم موظف الحجوزات بالتواصل معكم لتمام الإجراءات.\n\n"
+                    f"*شكراً لثقتكم باختيار قصر الهناء، ونتمنى لكم رحلة ممتعة معنا مقدماً!* 🏔️ وبإذن الله رحلة مباركة للجميع."
                 )
                 
                 msg_remind_pay = (
@@ -141,7 +142,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                     f"⚠️ *ملاحظات هامة جداً للرحلة:*\n"
                     f"1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.\n"
                     f"2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.\n\n"
-                    f"*رافقتكم السلامة في طريقكم, ونلتقي غداً على خير وبركة!* 🌹"
+                    f"*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
                 )
                 
                 msg_cancel = (
@@ -161,7 +162,8 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
-                with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                # تغيير اسم الزبون الأول إلى "تأكيد الحجز" مع الإبقاء على ميزة تحويل الحركة مباشرة للتطبيق
+                with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. تأكيد الحجز</button></a>', unsafe_allow_html=True)
                 with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
                 with col3: st.markdown(f'<a href="{url_paid}"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
@@ -183,11 +185,15 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
         df = st.session_state['df']
         col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
         
+        col_price = 'اجمالي التكلفة'
+        
         if col_name:
             search_user = st.selectbox("🎯 اختر أو اكتب اسم العميل للبحث السريع:", ["-- اختر اسماً لعرض تفاصيل حركته --"] + df[col_name].dropna().tolist())
             
             if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
+                
+                u_price = user_full_data.get(col_price, 'غير محدد') if col_price in df.columns else "غير محدد"
                 
                 # إنشاء تصميم أنيق لعرض التفاصيل كبطاقة
                 st.markdown(f"""
@@ -199,6 +205,7 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
                     <p style="font-size: 16px;"><b>👥 عدد الأفراد المسجلين:</b> {user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')}</p>
                     <p style="font-size: 16px;"><b>🏨 الفندق / الإقامة:</b> {user_full_data.get(next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c), 'الإقامة'), 'غير محدد')}</p>
                     <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
+                    <p style="font-size: 16px; color: #25D366;"><b>💰 سعر الحجز / القيمة المالية:</b> {u_price}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
