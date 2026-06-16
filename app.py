@@ -106,7 +106,6 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                     f"*شكراً لثقتكم باختيار قصر الهناء، ونتمنى لكم رحلة ممتعة معنا مقدماً!* 🏔️ وبإذن الله رحلة مباركة للجميع."
                 )
                 
-                # تحديث نص رسالة التأكيد النهائي لتطابق الشيت تماماً بناءً على المعادلة المرسلة
                 msg_remind_pay = (
                     f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
                     f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
@@ -163,7 +162,6 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
                 with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. تأكيد الحجز</button></a>', unsafe_allow_html=True)
-                # تغيير الزر الثاني إلى "التأكيد النهائي" مع الإبقاء على ميزة فتح التطبيق مباشرة
                 with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. التأكيد النهائي</button></a>', unsafe_allow_html=True)
                 with col3: st.markdown(f'<a href="{url_paid}"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
@@ -185,15 +183,17 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
         df = st.session_state['df']
         col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
         
-        col_price = 'اجمالي التكلفة'
+        # تحسين الالتقاط: يبحث عن أي عمود يحتوي على جملة "اجمالي التكلفة" أو "إجمالي التكلفة" متجنباً فروقات الهمزة والمسافات
+        col_price = next((c for c in df.columns if 'اجمالي التكلفة' in c or 'إجمالي التكلفة' in c), None)
         
         if col_name:
             search_user = st.selectbox("🎯 اختر أو اكتب اسم العميل للبحث السريع:", ["-- اختر اسماً لعرض تفاصيل حركته --"] + df[col_name].dropna().tolist())
             
-            if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
+            if search_user != "-- اختر اسماً لعرض تفاصيل hركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
                 
-                u_price = user_full_data.get(col_price, 'غير محدد') if col_price in df.columns else "غير محدد"
+                # جلب القيمة بشكل مرن بناءً على الفحص المتقدم أعلاه
+                u_price = user_full_data.get(col_price, 'غير محدد') if col_price else "غير محدد"
                 
                 # إنشاء تصميم أنيق لعرض التفاصيل كبطاقة
                 st.markdown(f"""
@@ -224,7 +224,7 @@ elif page == "📋 الكشف الكلي لجميع الركاب":
     
     if 'df' in st.session_state:
         df = st.session_state['df']
-        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين in المنظومة: {df.shape[0]} مسافر")
+        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
         st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
