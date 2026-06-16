@@ -7,10 +7,7 @@ import urllib.parse
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
-# 🧭 إضافة القائمة الجانبية لإظهار التقارير السابقة وإدارة الحجوزات
-st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
-page = st.sidebar.radio("انتقل إلى:", ["📋 إدارة ومراسلة الحجوزات", "💰 التقارير المالية والإيرادات"])
-
+# SHEET_ID الثابت العام للمنظومة
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
 def load_data_public(sheet_name):
@@ -20,19 +17,45 @@ def load_data_public(sheet_name):
     data.columns = data.columns.str.strip()
     return data
 
-# ----------------------------------------------------
-# 📋 القسم الأول: إدارة ومراسلة الحجوزات
-# ----------------------------------------------------
-if page == "📋 إدارة ومراسلة الحجوزات":
-    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
-    st.subheader("رحلة الجبل الأخضر 2026")
+# 🧭 القائمة الجانبية الشاملة للأقسام الخمسة
+st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
+page = st.sidebar.radio("انتقل إلى القائمة:", [
+    "💬 مركز مراسلة حالات الزبائن",
+    "📋 الكشف الكلي لجميع الركاب", 
+    "🟢 كشف ركاب طرابلس والغرب", 
+    "🔵 كشف ركاب المنطقة الشرقية", 
+    "💰 التقارير المالية والإيرادات"
+])
 
-    if st.button("🔄 تحديث وسحب الحجوزات الحالية"):
-        try:
-            st.session_state['df'] = load_data_public('Form responses 1')
-            st.success("تم تحديث كشف الحجوزات بنجاح من السحابة!")
-        except Exception as e:
-            st.error(f"تأكد من إعدادات مشاركة الشيت العام: {e}")
+# زر التحديث العام في القائمة الجانبية ليكون متاحاً في كل الصفحات
+if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة"):
+    try:
+        st.session_state['df'] = load_data_public('Form responses 1')
+        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+        st.sidebar.success("تم تحديث كافة البيانات المالية والحجوزات!")
+    except Exception as e:
+        st.sidebar.error(f"تأكد من إعدادات مشاركة الشيت: {e}")
+
+# تأمين وجود البيانات في session_state لتفادي أخطاء أول تشغيل
+if 'df' not in st.session_state:
+    try:
+        st.session_state['df'] = load_data_public('Form responses 1')
+    except:
+        pass
+
+if 'df_finance' not in st.session_state:
+    try:
+        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+    except:
+        pass
+
+# ----------------------------------------------------
+# 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
+# ----------------------------------------------------
+if page == "💬 مركز مراسلة حالات الزبائن":
+    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
+    st.subheader("مركز المراسلات الذكي وحالات الزبائن")
+    st.markdown("---")
 
     if 'df' in st.session_state:
         df = st.session_state['df']
@@ -52,15 +75,10 @@ if page == "📋 إدارة ومراسلة الحجوزات":
         else:
             df_filtered = df.copy()
             
-        st.write("### 📊 كشف البيانات الشامل:")
-        st.dataframe(df_filtered, use_container_width=True)
-        st.markdown("---")
-        
         if not col_name or not col_phone:
             st.warning("⚠️ للمراسلة: تأكد من وجود عمود يحتوي على 'الاسم' وعمود يحتوي على 'رقم الهاتف' في الشيت.")
         else:
-            st.write("### 💬 مركز المراسلات الذكي وحالات الزبائن:")
-            selected_user = st.selectbox("اختر اسم الزبون المراد مراسلته:", df_filtered[col_name].dropna().tolist())
+            selected_user = st.selectbox("اختر اسم الزبون المراد مراسلته عبر الواتساب:", df_filtered[col_name].dropna().tolist())
             
             if selected_user:
                 user_data = df_filtered[df_filtered[col_name] == selected_user].iloc[0]
@@ -73,7 +91,6 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                # 1. نص رسالة الاستلام المبدئي التلقائي
                 msg_confirm = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
                     f"مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
@@ -86,7 +103,6 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                     f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
                 )
                 
-                # 2. نص رسالة حث الدفع والمقر
                 msg_remind_pay = (
                     f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
                     f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
@@ -99,7 +115,6 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                     f"شركة قصر الهناء للاستثمار السياحي."
                 )
                 
-                # 3. نص رسالة تأكيد السداد المالي النهائي
                 msg_paid = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
                     f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟\n\n"
@@ -110,7 +125,6 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                     f"*شكراً لكم - إدارة شركة قصر الهناء* 🌹"
                 )
                 
-                # 4. نص رسالة باص طرابلس وركاب الغرب
                 msg_tripoli_bus = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
                     f"ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
@@ -127,7 +141,6 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                     f"*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
                 )
                 
-                # 5. نص رسالة الإلغاء
                 msg_cancel = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
                     f"الأستاذ(ة): *{u_name}* 🌹\n\n"
@@ -142,39 +155,82 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                 url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
                 url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
                 
+                st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
-                with col1:
-                    st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
-                with col2:
-                    st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
-                with col3:
-                    st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
+                with col1: st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                with col2: st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
+                with col3: st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
                     if "الشرقية" not in u_reg:
                         st.markdown(f'<a href="{url_tripoli_bus}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🚌 4. باص طرابلس</button></a>', unsafe_allow_html=True)
                     else:
                         st.button("🔒 4. ركاب الشرقية", disabled=True, help="هذا العميل تابع للمنطقة الشرقية.")
-                with col5:
-                    st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
+                with col5: st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 💰 القسم الثاني: التقارير المالية والإيرادات (تمت إعادتها هنا)
+# 📋 الصفحة الثانية: الكشف الكلي لجميع الركاب
+# ----------------------------------------------------
+elif page == "📋 الكشف الكلي لجميع الركاب":
+    st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
+    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
+        st.dataframe(df, use_container_width=True)
+
+# ----------------------------------------------------
+# 🟢 الصفحة الثالثة: كشف ركاب طرابلس والغرب
+# ----------------------------------------------------
+elif page == "🟢 كشف ركاب طرابلس والغرب":
+    st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
+    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
+        if col_region:
+            df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
+            st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
+            st.dataframe(df_tripoli, use_container_width=True)
+        else:
+            st.dataframe(df, use_container_width=True)
+
+# ----------------------------------------------------
+# 🔵 الصفحة الرابعة: كشف ركاب المنطقة الشرقية
+# ----------------------------------------------------
+elif page == "🔵 كشف ركاب المنطقة الشرقية":
+    st.title("🔵 كشف ركاب المنطقة الشرقية")
+    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
+        if col_region:
+            df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
+            st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
+            st.dataframe(df_east, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
+
+# ----------------------------------------------------
+# 💰 الصفحة الخامسة: التقارير المالية والإيرادات
 # ----------------------------------------------------
 elif page == "💰 التقارير المالية والإيرادات":
     st.title("💰 الإيرادات والتقارير المالية للشركة")
     st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
     st.markdown("---")
-    
-    if st.button("🔄 سحب وتحديث البيانات المالية من السحابة"):
-        try:
-            st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
-            st.success("تم سحب وتحديث البيانات المالية الحية بنجاح! 💰")
-        except Exception as e:
-            st.error(f"تأكد من وجود ورقة '📊 التقرير المالي والإيرادات' وإذن مشاركتها: {e}")
 
     if 'df_finance' in st.session_state:
         df_finance = st.session_state['df_finance']
         st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
         st.dataframe(df_finance, use_container_width=True)
         st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
+    else:
+        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
