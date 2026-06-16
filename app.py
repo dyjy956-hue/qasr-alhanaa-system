@@ -58,11 +58,11 @@ if 'df_finance' not in st.session_state:
     except:
         pass
 
-# تهيئة ذاكرة الحضور المؤقتة ليوم الرحلة
-if 'attended_phones' not in st.session_state:
-    st.session_state['attended_phones'] = []
-if 'just_attended' not in st.session_state:
-    st.session_state['just_attended'] = None
+# تهيئة ذاكرة الحضور المؤقتة بناءً على "الاسم" بدلاً من الهاتف لمنع التداخل
+if 'attended_names' not in st.session_state:
+    st.session_state['attended_names'] = []
+if 'just_attended_name' not in st.session_state:
+    st.session_state['just_attended_name'] = None
 
 # ----------------------------------------------------
 # 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
@@ -106,7 +106,9 @@ if page == "💬 - مركز مراسلة حالات الزبائن":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={phone_str}"
+                # التعديل الذكي: تشفير "اسم الزبون" داخل رابط الباركود ليكون فريداً لكل عائلة ومستقلاً عن الهاتف
+                encoded_name_for_qr = urllib.parse.quote(str(u_name).strip())
+                qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encoded_name_for_qr}"
                 
                 msg_confirm = (
                     f"السلام عليكم ورحمة الله وبركاته،\n\n"
@@ -344,15 +346,17 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
         
         if col_name and col_phone:
-            df['clean_phone'] = df[col_phone].astype(str).str.replace('.0', '', regex=False).str.strip()
-            all_valid_phones = df['clean_phone'].tolist()
+            # تنظيف وتجهيز الأسماء كمعرّف فريد بدلاً من الهواتف المشتركة
+            df['clean_name'] = df[col_name].astype(str).str.strip()
+            all_valid_names = df['clean_name'].tolist()
             
-            # فلترة وتنظيف الذاكرة
-            st.session_state['attended_phones'] = [p for p in st.session_state['attended_phones'] if p in all_valid_phones]
+            # حماية وتنظيف الذاكرة المؤقتة للأسماء الحاضرة
+            st.session_state['attended_names'] = [n for n in st.session_state['attended_names'] if n in all_valid_names]
             
-            df_attended = df[df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
-            df_missing = df[~df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
+            df_attended = df[df['clean_name'].isin(st.session_state['attended_names'])].copy()
+            df_missing = df[~df['clean_name'].isin(st.session_state['attended_names'])].copy()
             
+            # عرض عدادات الإحصاء الحية والدقيقة بدون تداخل
             c1, c2, c3 = st.columns(3)
             with c1: st.metric("👥 إجمالي العائلات بالرحلة", len(df))
             with c2: st.metric("🟢 عائلات تم تسجيل حضورها", len(df_attended))
@@ -362,72 +366,8 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
             
             scan_mode = st.radio("🛠️ اختر طريقة تسجيل صعود العائلة:", ["✏️ تسجيل يدوي سريع (اسم / هاتف)", "📸 استخدام كاميرا الباركود"])
             
-            scanned_phone = None
+            scanned_name = None
             
             if scan_mode == "📸 استخدام كاميرا الباركود":
                 st.write("### 📸 وجه كاميرا الموبايل نحو باركود العائلة:")
-                img_file = st.camera_input("اضغط لالتقاط صورة الباركود ومسحه")
-                
-                if img_file is not None:
-                    try:
-                        import cv2
-                        file_bytes = np.asarray(bytearray(img_file.read()), dtype=np.uint8)
-                        opencv_img = cv2.imdecode(file_bytes, 1)
-                        
-                        gray = cv2.cvtColor(opencv_img, cv2.COLOR_BGR2GRAY)
-                        detector = cv2.QRCodeDetector()
-                        data, bbox, straight_qrcode = detector.detectAndDecode(gray)
-                        
-                        if data and str(data).strip() in all_valid_phones:
-                            scanned_phone = str(data).strip()
-                        else:
-                            data, bbox, straight_qrcode = detector.detectAndDecode(opencv_img)
-                            if data and str(data).strip() in all_valid_phones:
-                                scanned_phone = str(data).strip()
-                            else:
-                                st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. الرجاء استخدام التسجيل اليدوي السريع.")
-                    except Exception as e:
-                        st.error("تنبيه الحساب السحابي: يرجى تفعيل 'التسجيل اليدوي السريع' لإتمام العمل فوراً بنجاح.")
-            
-            else:
-                st.write("### ✏️ اختر اسم العائلة المتواجدة أمامك الآن لتسجيلها:")
-                missing_list = ["-- اختر اسم العائلة من القائمة لتسجيل حضورها فوراً --"] + df_missing[col_name].dropna().tolist()
-                selected_missing = st.selectbox("قائمة العائلات المتأخرة:", missing_list)
-                
-                if selected_missing != "-- اختر اسم العائلة من القائمة لتسجيل حضورها فوراً --":
-                    user_row_manual = df[df[col_name] == selected_missing]
-                    if not user_row_manual.empty:
-                        potential_phone = user_row_manual.iloc[0]['clean_phone']
-                        if potential_phone in all_valid_phones:
-                            scanned_phone = potential_phone
-            
-            # الإصلاح هنا: بمجرد لقط رقم جديد، نقوم بحفظه في الحضور وتصفير الكاميرا لانتظار الباركود التالي
-            if scanned_phone and scanned_phone in all_valid_phones:
-                if scanned_phone not in st.session_state['attended_phones']:
-                    st.session_state['attended_phones'].append(scanned_phone)
-                st.session_state['just_attended'] = scanned_phone  # حفظ العائلة الحالية للعرض فقط
-                st.rerun()
-
-            # عرض بيانات العائلة الممسوحة حالياً مع إعطاء خيار إغلاقها أو الانتقال للباركد القادم
-            if st.session_state['just_attended']:
-                active_phone = st.session_state['just_attended']
-                user_row = df[df['clean_phone'] == active_phone]
-                
-                if not user_row.empty:
-                    family_name = user_row.iloc[0][col_name]
-                    fam_count = user_row.iloc[0][col_count] if col_count else "غير محدد"
-                    
-                    st.success(f"✅ تم تأكيد صعود العائلة وتثبيتها في الكشوفات!")
-                    st.markdown(f"""
-                    <div style="background-color: #e8f5e9; border-right: 5px solid #2e7d32; padding: 15px; border-radius: 5px;">
-                        <h4 style="color: #2e7d32; margin: 0;">📋 حالة الصعود الحالية:</h4>
-                        <p style="margin: 5px 0; font-size: 16px;"><b>اسم العائلة:</b> {family_name} | <b>عدد الأفراد:</b> {fam_count} أشخاص</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    msg_welcome = f"تم تسجيل صعود عائلتكم الكريمة إلى الحافلة بنجاح! 🚌✨\n\nشركة قصر الهناء تتمنى لكم رحلة سعيدة وممتعة إلى الجبل الأخضر. رافقتكم السلامة 🌹"
-                    url_welcome = f"whatsapp://send?phone={active_phone}&text={urllib.parse.quote(msg_welcome)}"
-                    
-                    col_btn1, col_btn2 = st.columns([3, 1])
-                    with col_btn1:
-                        st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%;">📲 إرسال رسالة الترحيب الفورية للراكب عبر واتساب</button></a>', unsafe_allow_html=True)
+                img_
