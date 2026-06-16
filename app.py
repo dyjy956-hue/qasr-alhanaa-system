@@ -42,4 +42,57 @@ if page == "📋 إدارة ومراسلة الحجوزات":
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
 
         if not col_name or not col_phone:
-            st.warning("⚠️ للمراسلة: تأكد من وجود عمود الاسم والهاتف
+            st.warning("""⚠️ للمراسلة: تأكد من وجود عمود الاسم والهاتف في الشيت.""")
+        else:
+            tab_tripoli, tab_east = st.tabs(["🟢 كشف باص طرابلس والغرب", "🔵 كشف ركاب المنطقة الشرقية"])
+            
+            if col_region:
+                df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
+                df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
+            else:
+                df_tripoli = df.copy()
+                df_east = pd.DataFrame(columns=df.columns)
+
+            # --- التبويب الأول: طرابلس الغرب ---
+            with tab_tripoli:
+                st.write(f"### 📊 ركاب طرابلس والمنطقة الغربية ({df_tripoli.shape[0]} مسافر):")
+                st.dataframe(df_tripoli, use_container_width=True)
+                
+                selected_user_t = st.selectbox("اختر اسم الزبون (باص طرابلس):", ["-- اختر اسماً --"] + df_tripoli[col_name].dropna().tolist(), key="tripoli_select")
+                if selected_user_t != "-- اختر اسماً --":
+                    user_data = df_tripoli[df_tripoli[col_name] == selected_user_t].iloc[0]
+                    u_name = user_data[col_name]
+                    u_phone = user_data[col_phone]
+                    u_count = user_data[col_count] if col_count else "غير محدد"
+                    u_hotel = user_data[col_hotel] if col_hotel else "غير محدد"
+                    u_reg = str(user_data[col_region]) if col_region else ""
+                    phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
+                    
+                    msg_confirm = f"""السلام عليكم ورحمة الله وبركاته،
+
+مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹
+
+تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨
+
+📌 *الاسم:* {u_name}
+👥 *العدد:* {u_count} أشخاص
+🏨 *الإقامة:* {u_hotel}
+📍 *مكان الانطلاق:* {u_reg}
+
+💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.
+
+*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"""
+
+                    msg_remind_pay = f"""مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨
+
+✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌
+
+💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:
+يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.
+
+📍 عنوان الشركة: طرابلس - الظهرة.
+⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.
+
+📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.
+
+نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنس
