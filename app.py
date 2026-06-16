@@ -82,4 +82,10 @@ if page == "💬 مركز مراسلة حالات الزبائن":
         df = st.session_state['df']
         
         col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
-        col_phone = next((c for c
+        col_phone = next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c or 'موبايل' in c), None)
+        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c), None)
+        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+
+        if col_region:
+            region = st.selectbox(f"تصفية سريعة
