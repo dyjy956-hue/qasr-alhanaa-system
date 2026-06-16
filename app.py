@@ -78,3 +78,28 @@ if page == "🔍 استعلام وبطاقة حجز عميل":
     
     if col_name:
         search_user = st.selectbox("🎯 اختر اسم العميل للبحث:", ["-- اختر اسماً --"] + df[col_name].dropna().tolist())
+        
+        if search_user != "-- اختر اسماً --":
+            user_full_data = df[df[col_name] == search_user].iloc[0]
+            
+            # استخراج القيم بمرونة
+            u_phone = user_full_data.get(next((c for c in df.columns if 'هاتف' in c or 'رقم' in c), 'الهاتف'), 'غير مسجل')
+            u_count = user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')
+            u_hotel = user_full_data.get(next((c for c in df.columns if 'فندق' in c or 'إقامة' in c), 'الإقامة'), 'غير محدد')
+            u_reg = user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')
+            u_cost = user_full_data.get(col_cost, 'لم يحدد') if col_cost else "غير متوفر"
+
+            st.markdown(f"""
+            <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px;">
+                <h3 style="color: #1d3557;">🎫 بطاقة البيانات التفصيلية</h3>
+                <p><b>👤 الاسم:</b> {search_user}</p>
+                <p><b>📞 الهاتف:</b> {str(u_phone).replace('.0','')}</p>
+                <p><b>👥 العدد:</b> {u_count}</p>
+                <p><b>🏨 الإقامة:</b> {u_hotel}</p>
+                <p><b>📍 الانطلاق:</b> {u_reg}</p>
+                <hr>
+                <p style="font-size: 20px; color: #2b5c8f;"><b>💰 إجمالي التكلفة: {u_cost}</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+# (بقية الصفحات تتبع نفس المنطق السابق...)
