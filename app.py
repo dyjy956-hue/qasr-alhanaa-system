@@ -15,17 +15,17 @@ def load_data_from_sheet(sheet_name):
     data.columns = data.columns.str.strip()
     return data
 
-st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
-page = st.sidebar.radio("انتقل إلى:", ["📋 إدارة ومراسلة الحجوزات", "💰 التقارير المالية والإيرادات"])
+st.sidebar.title("لوحة تحكم شركة قصر الهناء")
+page = st.sidebar.radio("انتقل إلى:", ["إدارة ومراسلة الحجوزات", "التقارير المالية والإيرادات"])
 
 # ----------------------------------------------------
-# 📄 الصفحة الأولى: إدارة ومراسلة الحجوزات
+# الصفحة الأولى: إدارة ومراسلة الحجوزات
 # ----------------------------------------------------
-if page == "📋 إدارة ومراسلة الحجوزات":
-    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
+if page == "إدارة ومراسلة الحجوزات":
+    st.title("لوحة تحكم حجوزات قصر الهناء")
     st.subheader("رحلة الجبل الأخضر 2026")
     
-    if st.button("🔄 تحديث وسحب الحجوزات الحالية"):
+    if st.button("تحديث وسحب الحجوزات الحالية"):
         try:
             st.session_state['df_hajj'] = load_data_from_sheet('Form responses 1')
             st.success("تم تحديث كشف الحجوزات بنجاح!")
@@ -42,9 +42,9 @@ if page == "📋 إدارة ومراسلة الحجوزات":
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
 
         if not col_name or not col_phone:
-            st.warning("⚠️ للمراسلة: تأكد من وجود عمود الاسم والهاتف في كشف البيانات.")
+            st.warning("تنبيه للمراسلة: تأكد من وجود عمود الاسم والهاتف في كشف البيانات.")
         else:
-            tab_tripoli, tab_east = st.tabs(["🟢 كشف باص طرابلس والغرب", "🔵 كشف ركاب المنطقة الشرقية"])
+            tab_tripoli, tab_east = st.tabs(["كشف باص طرابلس والغرب", "كشف ركاب المنطقة الشرقية"])
             
             if col_region:
                 df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
@@ -55,7 +55,7 @@ if page == "📋 إدارة ومراسلة الحجوزات":
 
             # --- التبويب الأول: طرابلس الغرب ---
             with tab_tripoli:
-                st.write(f"### 📊 ركاب طرابلس والمنطقة الغربية ({df_tripoli.shape[0]} مسافر):")
+                st.write(f"ركاب طرابلس والمنطقة الغربية ({df_tripoli.shape[0]} مسافر):")
                 st.dataframe(df_tripoli, use_container_width=True)
                 
                 selected_user_t = st.selectbox("اختر اسم الزبون (باص طرابلس):", ["-- اختر اسماً --"] + df_tripoli[col_name].dropna().tolist(), key="tripoli_select")
@@ -69,20 +69,129 @@ if page == "📋 إدارة ومراسلة الحجوزات":
                     phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                     
                     msg_confirm = f"""السلام عليكم ورحمة الله وبركاته،
+مرحباً بك في عائلة شركة قصر الهناء للخدمات السياحية.
+تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة.
+الاسم: {u_name}
+العدد: {u_count} أشخاص
+الإقامة: {u_hotel}
+مكان الانطلاق: {u_reg}
+يرجى العلم أن الحجز يعتبر مبدئياً حتى تأكيد السداد المالي مالي نقداً أو عبر الحساب المصرفي لتمام الإجراءات.
+شكراً لثقتكم باختيار قصر الهناء، ونتمنى لكم رحلة ممتعة معنا مقدماً!"""
 
-مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹
+                    msg_remind_pay = f"""مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء.
+تم تأكيد حجزكم بنجاح في الرحلة العائلية للجبل الاخضر.
+الخطوة المتبقية لتثبيت المقاعد نهائياً: يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.
+عنوان الشركة: طرابلس - الظهرة.
+آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.
+ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.
+نتطلع لرحلة ممتعة وصناعة ذكريات لا تنسى معكم! دمت بخير وفي أمان الله.
+شركة قصر الهناء للاستثمار السياحي."""
 
-تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨
+                    msg_paid = f"""السلام عليكم ورحمة الله وبركاته،
+الأستاذ الفاضل: {u_name}
+يسعدنا إبلاغكم بأنه قد تم تأكيد السداد المالي بنجاح وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026).
+عدد المقاعد المؤكدة: {u_count}
+ترتيبات الإقامة: {u_hotel}
+جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة.
+شكراً لكم - إدارة شركة قصر الهناء"""
 
-📌 *الاسم:* {u_name}
-👥 *العدد:* {u_count} أشخاص
-🏨 *الإقامة:* {u_hotel}
-📍 *مكان الانطلاق:* {u_reg}
+                    msg_tripoli_bus = f"""السلام عليكم ورحمة الله وبركاته،
+ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر)
+نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة قصر الهناء.
+إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:
+مكان التجمع الدقيق: [اكتب المكان هنا]
+وقت التواجد وتنزيل الحقائب: [الساعة]
+وقت تحرك الحافلة الفعلي: [الساعة] تماماً
+مشرف حافلة طرابلس: [الاسم] -> [الهاتف]
+رقم هاتف السائق: [الرقم]
+ملاحظات هامة جداً للرحلة:
+1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.
+2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.
+رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!"""
 
-💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.
+                    msg_cancel = f"""السلام عليكم ورحمة الله وبركاته،
+الأستاذ: {u_name}
+نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، تم إلغاء تسجيلكم لرحلة الجبل الأخضر 2026 بنجاح.
+نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
+شكراً لكم - شركة قصر الهناء للخدمات السياحية"""
 
-*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"""
+                    url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
+                    url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
+                    url_paid = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid)}"
+                    url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
+                    url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
+                    
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    with col1: st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">2. تأكيد المقر</button></a>', unsafe_allow_html=True)
+                    with col3: st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">3. السداد النهائي</button></a>', unsafe_allow_html=True)
+                    with col4: st.markdown(f'<a href="{url_tripoli_bus}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">4. باص طرابلس</button></a>', unsafe_allow_html=True)
+                    with col5: st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
 
-                    msg_remind_pay = f"""مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨
+            # --- التبويب الثاني: المنطقة الشرقية ---
+            with tab_east:
+                st.write(f"ركاب المنطقة الشرقية ({df_east.shape[0]} مسافر):")
+                st.dataframe(df_east, use_container_width=True)
+                
+                selected_user_e = st.selectbox("اختر اسم الزبون (المنطقة الشرقية):", ["-- اختر اسماً --"] + df_east[col_name].dropna().tolist(), key="east_select")
+                if selected_user_e != "-- اختر اسماً --":
+                    user_data = df_east[df_east[col_name] == selected_user_e].iloc[0]
+                    u_name = user_data[col_name]
+                    u_phone = user_data[col_phone]
+                    u_count = user_data[col_count] if col_count else "غير محدد"
+                    u_hotel = user_data[col_hotel] if col_hotel else "غير محدد"
+                    u_reg = str(user_data[col_region]) if col_region else ""
+                    phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
+                    
+                    msg_confirm_e = f"""السلام عليكم ورحمة الله وبركاته،
+مرحباً بك في عائلة شركة قصر الهناء للخدمات السياحية.
+تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة.
+الاسم: {u_name}
+العدد: {u_count} أشخاص
+الإقامة: {u_hotel}
+مكان الانطلاق: {u_reg}
+يرجى العلم أن الحجز يعتبر مبدئياً حتى تأكيد السداد المالي لتمام الإجراءات.
+شكراً لثقتكم باختيار قصر الهناء!"""
 
-✅ تم تأكيد حجزكم بنجاح في
+                    msg_paid_e = f"""السلام عليكم ورحمة الله وبركاته،
+الأستاذ الفاضل: {u_name}
+يسعدنا إبلاغكم بأنه قد تم تأكيد السداد المالي بنجاح وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026).
+عدد المقاعد المؤكدة: {u_count}
+ترتيبات الإقامة: {u_hotel}
+جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة.
+شكراً لكم - إدارة شركة قصر الهناء"""
+
+                    msg_cancel_e = f"""السلام عليكم ورحمة الله وبركاته،
+الأستاذ: {u_name}
+نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، تم إلغاء تسجيلكم لرحلة الجبل الأخضر 2026 بنجاح.
+نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
+شكراً لكم - شركة قصر الهناء للخدمات السياحية"""
+                    
+                    url_confirm_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm_e)}"
+                    url_paid_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid_e)}"
+                    url_cancel_e = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel_e)}"
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1: st.markdown(f'<a href="{url_confirm_e}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<a href="{url_paid_e}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">2. السداد النهائي</button></a>', unsafe_allow_html=True)
+                    with col3: st.markdown(f'<a href="{url_cancel_e}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; width: 100%;">3. إلغاء الحجز</button></a>', unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# الصفحة الثانية: التقارير المالية والإيرادات
+# ----------------------------------------------------
+elif page == "التقارير المالية والإيرادات":
+    st.title("الإيرادات والتقارير المالية للشركة")
+    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
+    
+    if st.button("سحب وتحديث البيانات المالية من السحابة"):
+        try:
+            st.session_state['df_finance'] = load_data_from_sheet('📊 التقرير المالي والإيرادات')
+            st.success("تم سحب وتحديث البيانات المالية الحية بنجاح!")
+        except Exception as e:
+            st.error(f"تأكد من وجود ورقة '📊 التقرير المالي والإيرادات' وإذن مشاركتها: {e}")
+
+    if 'df_finance' in st.session_state:
+        df_finance = st.session_state['df_finance']
+        st.write("كشف الإيرادات والمصروفات الحالي:")
+        st.dataframe(df_finance, use_container_width=True)
+        st.info(f"مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفاً.")
