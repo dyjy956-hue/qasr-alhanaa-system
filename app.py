@@ -1,5 +1,6 @@
 
 
+# تعليق لحماية السطر الأول من المسافات التلقائية
 import streamlit as st
 import pandas as pd
 import urllib.parse
@@ -19,22 +20,25 @@ if 'authenticated' not in st.session_state:
 if not st.session_state['authenticated']:
     st.title("🔒 نظام تسجيل الدخول - شركة قصر الهناء")
     st.markdown("---")
+    
     col1, col2 = st.columns([1, 2])
     with col1:
         st.image("https://cdn-icons-png.flaticon.com/512/3064/3064155.png", width=150)
     with col2:
         st.write("### مرحباً بك في لوحة تحكم الإدارة")
         user_password = st.text_input("الرجاء إدخال كلمة مرور المنظومة للدخول:", type="password")
+        
         if st.button("🔓 تسجيل الدخول"):
             if user_password == st.session_state['master_password']:
                 st.session_state['authenticated'] = True
+                st.success("تم التحقق بنجاح! جاري تحميل المنظومة...")
                 st.rerun()
             else:
-                st.error("❌ كلمة المرور غير صحيحة")
+                st.error("❌ كلمة المرور غير صحيحة، يرجى إعادة المحاولة.")
     st.stop()
 
 # ====================================================
-# 🚌 بداية المنظومة
+# 🚌 بداية المنظومة الأصلية
 # ====================================================
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
@@ -43,28 +47,41 @@ def load_data_public(sheet_name):
     url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
+    col_name = next((c for c in data.columns if 'الاسم' in c or 'اسم' in c), None)
+    if col_name and sheet_name == 'Form responses 1':
+        data = data.sort_values(by=col_name).reset_index(drop=True)
     return data
 
 def convert_df_to_excel(df_to_export):
+    keep_cols = [c for c in df_to_export.columns if any(k in c for k in ['الاسم', 'الهاتف', 'رقم', 'العدد', 'أفراد', 'الإقامة', 'فندق', 'انطلاق', 'مكان'])]
+    if not keep_cols: keep_cols = df_to_export.columns[:5]
+    df_clean = df_to_export[keep_cols].copy()
+    df_clean.insert(0, '#', range(1, len(df_clean) + 1))
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_to_export.to_excel(writer, index=False)
+        df_clean.to_excel(writer, index=False, sheet_name='الكشف الرسمي')
     return output.getvalue()
 
-# القائمة الجانبية
+def display_styled_dataframe(dataframe):
+    df_display = dataframe.copy()
+    df_display.insert(0, '#', range(1, len(df_display) + 1))
+    st.dataframe(df_display.set_index('#'), use_container_width=True)
+
+# 🧭 القائمة الجانبية
+st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
 page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💬 مركز مراسلة حالات الزبائن", "🔍 استعلام وبطاقة حجز عميل", "📋 الكشف الكلي لجميع الركاب",
     "🏢 كشف نزلاء فندق قورينا", "🌲 كشف نزلاء منتجع شحات", "🟢 كشف ركاب طرابلس والغرب", 
     "🔵 كشف ركاب المنطقة الشرقية", "💰 التقارير المالية والإيرادات"
 ])
 
-if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة"):
+if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة", use_container_width=True):
     st.session_state['df'] = load_data_public('Form responses 1')
     st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
-    st.rerun()
+    st.sidebar.success("تم التحديث!")
 
 # ----------------------------------------------------
-# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
+# 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل (معدلة)
 # ----------------------------------------------------
 if page == "🔍 استعلام وبطاقة حجز عميل":
     st.title("🔍 نظام الاستعلام الفوري")
@@ -74,36 +91,3 @@ if page == "🔍 استعلام وبطاقة حجز عميل":
         col_name = next((c for c in df.columns if 'الاسم' in c), None)
         
         search_user = st.selectbox("🎯 اختر اسم العميل:", ["-- اختر اسماً --"] + df[col_name].dropna().tolist())
-        
-        if search_user != "-- اختر اسماً --":
-            user_full_data = df[df[col_name] == search_user].iloc[0]
-            
-            # جلب السعر والإجمالي من بيانات المالية
-            val_price, val_total = "غير محدد", "غير محدد"
-            if not df_f.empty:
-                col_name_f = next((c for c in df_f.columns if 'الاسم' in c), None)
-                user_fin = df_f[df_f[col_name_f] == search_user]
-                if not user_fin.empty:
-                    price_col = next((c for c in df_f.columns if 'سعر' in c or 'تكلفة' in c), None)
-                    total_col = next((c for c in df_f.columns if 'إجمالي' in c or 'مجموع' in c), None)
-                    if price_col: val_price = user_fin.iloc[0][price_col]
-                    if total_col: val_total = user_fin.iloc[0][total_col]
-
-            st.markdown(f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border-right: 5px solid #1d3557;">
-                <h3>🎫 بطاقة الحجز</h3>
-                <p><b>👤 الاسم:</b> {user_full_data.get(col_name)}</p>
-                <p><b>💰 سعر الخدمة:</b> {val_price}</p>
-                <p><b>📈 إجمالي التكلفة:</b> {val_total}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ----------------------------------------------------
-# استكمال باقي الصفحات (نفس الكود الأصلي الخاص بك)
-# ----------------------------------------------------
-elif page == "💬 مركز مراسلة حالات الزبائن":
-    st.write("مركز المراسلة...")
-elif page == "📋 الكشف الكلي لجميع الركاب":
-    st.dataframe(st.session_state.get('df'))
-elif page == "💰 التقارير المالية والإيرادات":
-    st.dataframe(st.session_state.get('df_finance'))
