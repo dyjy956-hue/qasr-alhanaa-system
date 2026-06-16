@@ -152,7 +152,6 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                     f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
                 )
 
-                # إصلاح وتأمين الأسطر الخمسة بالكامل هنا لمنع أي اقتطاع أو خطأ في الأقواس
                 url_confirm = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_confirm)}"
                 url_remind_pay = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_remind_pay)}"
                 url_paid = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_paid)}"
@@ -184,7 +183,8 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
         df = st.session_state['df']
         col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
         
-        col_price = 'اجمالي التكلفة'
+        # تحسين ذكي جداً: يبحث بأي طريقة ممكنة عن عمود "اجمالي التكلفة" ويتغاضى عن فروقات الحروف والمسافات
+        col_price = next((c for c in df.columns if 'اجمالي التكلفة' in c or 'إجمالي التكلفة' in c or 'تكلفة' in c or 'التكلفة' in c), None)
         
         if col_name:
             search_user = st.selectbox("🎯 اختر أو اكتب اسم العميل للبحث السريع:", ["-- اختر اسماً لعرض تفاصيل حركته --"] + df[col_name].dropna().tolist())
@@ -192,128 +192,9 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
                 
-                u_price = user_full_data.get(col_price, 'غير محدد') if col_price in df.columns else "غير محدد"
+                # جلب القيمة المالية بناءً على الفحص الشامل
+                u_price = user_full_data.get(col_price, 'غير محدد') if col_price else "غير محدد"
                 
                 # إنشاء تصميم أنيق لعرض التفاصيل كبطاقة
                 st.markdown(f"""
-                <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
-                    <hr style="margin: 10px 0;">
-                    <p style="font-size: 16px;"><b>👤 اسم العميل بالكامل:</b> {user_full_data.get(col_name, 'غير مسجل')}</p>
-                    <p style="font-size: 16px;"><b>📞 رقم الهاتف/الواتساب:</b> {str(user_full_data.get(next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c), 'الهاتف'), 'غير مسجل')).replace('.0','')}</p>
-                    <p style="font-size: 16px;"><b>👥 عدد الأفراد المسجلين:</b> {user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')}</p>
-                    <p style="font-size: 16px;"><b>🏨 الفندق / الإقامة:</b> {user_full_data.get(next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c), 'الإقامة'), 'غير محدد')}</p>
-                    <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
-                    <p style="font-size: 16px; color: #25D366;"><b>💰 سعر الحجز / القيمة المالية:</b> {u_price}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown("#### 📄 الصف الكامل للبيانات كما ورد في الشيت:")
-                st.dataframe(pd.DataFrame([user_full_data]), use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات للبحث به.")
-
-# ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب
-# ----------------------------------------------------
-elif page == "📋 الكشف الكلي لجميع الركاب":
-    st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
-    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
-        st.dataframe(df, use_container_width=True)
-
-# ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا
-# ----------------------------------------------------
-elif page == "🏢 كشف نزلاء فندق قورينا":
-    st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = Anti_next = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        
-        if col_hotel:
-            df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
-            st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
-            st.dataframe(df_quryna, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
-
-# ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات
-# ----------------------------------------------------
-elif page == "🌲 كشف نزلاء منتجع شحات":
-    st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        
-        if col_hotel:
-            df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
-            st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
-            st.dataframe(df_shahat, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
-
-# ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
-# ----------------------------------------------------
-elif page == "🟢 كشف ركاب طرابلس والغرب":
-    st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
-    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        
-        if col_region:
-            df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
-            st.dataframe(df_tripoli, use_container_width=True)
-        else:
-            st.dataframe(df, use_container_width=True)
-
-# ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية
-# ----------------------------------------------------
-elif page == "🔵 كشف ركاب المنطقة الشرقية":
-    st.title("🔵 كشف ركاب المنطقة الشرقية")
-    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        
-        if col_region:
-            df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
-            st.dataframe(df_east, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
-
-# ----------------------------------------------------
-# 💰 الصفحة الثامنة: التقارير المالية والإيرادات
-# ----------------------------------------------------
-elif page == "💰 التقارير المالية والإيرادات":
-    st.title("💰 الإيرادات والتقارير المالية للشركة")
-    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
-    st.markdown("---")
-
-    if 'df_finance' in st.session_state:
-        df_finance = st.session_state['df_finance']
-        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
-        st.dataframe(df_finance, use_container_width=True)
-        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
-    else:
-        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
+                <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px;
