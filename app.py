@@ -4,7 +4,6 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-import matplotlib.pyplot as plt
 from io import BytesIO
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
@@ -18,52 +17,26 @@ def load_data_public(sheet_name):
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
     
-    # ميزة الفرز الأبجدي التلقائي حسب الاسم لترتيب الكشوفات هندسياً
     col_name = next((c for c in data.columns if 'الاسم' in c or 'اسم' in c), None)
     if col_name and sheet_name == 'Form responses 1':
         data = data.sort_values(by=col_name).reset_index(drop=True)
     return data
 
-# دالة هندسية مصححة لتوليد ملف PDF احترافي للجدول مع إضافة الترقيم المتسلسل المُرتب
-def convert_df_to_pdf(df_to_export, title_text):
+# دالة هندسية بديلة ومضمونة 100% لتصدير كشوفات Excel مرتبة وأنيقة وتفتح في كل مكان
+def convert_df_to_excel(df_to_export):
     keep_cols = [c for c in df_to_export.columns if any(k in c for k in ['الاسم', 'الهاتف', 'رقم', 'العدد', 'أفراد', 'الإقامة', 'فندق', 'انطلاق', 'مكان'])]
     if not keep_cols:
         keep_cols = df_to_export.columns[:5]
     
     df_clean = df_to_export[keep_cols].copy()
-    
-    # إضافة العمود التسلسلي المنظم داخل الـ PDF
     df_clean.insert(0, '#', range(1, len(df_clean) + 1))
     
-    fig, ax = plt.subplots(figsize=(11, len(df_clean) * 0.4 + 2))
-    ax.axis('tight')
-    ax.axis('off')
-    
-    plt.title(title_text, fontsize=16, weight='bold', pad=20, loc='center')
-    
-    table = ax.table(
-        cellText=df_clean.values, 
-        colLabels=df_clean.columns, 
-        cellLoc='center', 
-        loc='center'
-    )
-    
-    table.auto_set_font_size(False)
-    table.scale(1.2, 1.5)
-    
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_text_props(weight='bold', color='white', fontsize=11)
-            cell.set_facecolor('#1d3557')
-        else:
-            cell.set_text_props(fontsize=10)
-            
-    buf = BytesIO()
-    plt.savefig(buf, format='pdf', bbox_inches='tight')
-    plt.close(fig)
-    return buf.getvalue()
+    output = BytesIO()
+    # استخدام التنسيق الافتراضي المضمون في سيرفرات streamlit سريعة التشغيل
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_clean.to_excel(writer, index=False, sheet_name='الكشف الرسمي')
+    return output.getvalue()
 
-# دالة مساعدة لعرض الجدول في Streamlit مع إضافة عمود التسلسل (#) في البداية بدلاً من الـ index القديم
 def display_styled_dataframe(dataframe):
     df_display = dataframe.copy()
     df_display.insert(0, '#', range(1, len(df_display) + 1))
@@ -174,7 +147,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 
 يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳
 
-👥 *عدد المقاعد المؤكدة:* {u_count}
+👥 *عدد المقاعد المؤاعد المؤكدة:* {u_count}
 🏨 *ترتيبات الإقامة:* {u_hotel}
 
 جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨
@@ -261,7 +234,7 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات.")
 
 # ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر الـ PDF الكلي
+# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب + زر Excel
 # ----------------------------------------------------
 elif page == "📋 الكشف الكلي لجميع الركاب":
     st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
@@ -270,89 +243,6 @@ elif page == "📋 الكشف الكلي لجميع الركاب":
         df = st.session_state['df']
         st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
         
-        pdf_total_data = convert_df_to_pdf(df, "الكشف الكلي والشامل لجميع الركاب - شركة قصر الهناء")
-        st.download_button("📥 تحميل الكشف العام كاملاً كملف PDF", data=pdf_total_data, file_name="Total_Trip_Passengers.pdf", mime="application/pdf")
-        
-        display_styled_dataframe(df)
-
-# ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا + زر الـ PDF
-# ----------------------------------------------------
-elif page == "🏢 كشف نزلاء فندق قورينا":
-    st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
-    st.markdown("---")
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        if col_hotel:
-            df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
-            st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_quryna, "كشف نزلاء فندق قورينا - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للفندق", data=pdf_data, file_name="Quryna_Hotel_Guests.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_quryna)
-
-# ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات + زر الـ PDF
-# ----------------------------------------------------
-elif page == "🌲 كشف نزلاء منتجع شحات":
-    st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
-    st.markdown("---")
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        if col_hotel:
-            df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
-            st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_shahat, "كشف نزلاء منتجع شحات - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للمنتجع", data=pdf_data, file_name="Shahat_Resort_Guests.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_shahat)
-
-# ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب + زر الـ PDF
-# ----------------------------------------------------
-elif page == "🟢 كشف ركاب طرابلس والغرب":
-    st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
-    st.markdown("---")
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        if col_region:
-            df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_tripoli, "كشف ركاب باص طرابلس والغرب - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للحافلة", data=pdf_data, file_name="Tripoli_Bus_Passengers.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_tripoli)
-
-# ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية + زر الـ PDF
-# ----------------------------------------------------
-elif page == "🔵 كشف ركاب المنطقة الشرقية":
-    st.title("🔵 كشف ركاب المنطقة الشرقية")
-    st.markdown("---")
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        if col_region:
-            df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
-            
-            pdf_data = convert_df_to_pdf(df_east, "كشف ركاب المنطقة الشرقية - شركة قصر الهناء")
-            st.download_button("📥 تحميل الكشف كملف PDF للشرقية", data=pdf_data, file_name="Eastern_Region_Passengers.pdf", mime="application/pdf")
-            
-            display_styled_dataframe(df_east)
-
-# ----------------------------------------------------
-# 💰 الصفحة الثامنة: التقارير المالية والإيرادات
-# ----------------------------------------------------
-elif page == "💰 التقارير المالية والإيرادات":
-    st.title("💰 الإيرادات والتقارير المالية للشركة")
-    st.markdown("---")
-    if 'df_finance' in st.session_state:
-        df_finance = st.session_state['df_finance']
-        st.dataframe(df_finance, use_container_width=True)
+        # زر إكسيل الفخم الجديد المضمون سحابياً
+        excel_data = convert_df_to_excel(df)
+        st.download_button("📥 تحميل الكشف العام كاملاً كملف Excel للمنظومة", data=excel_data, file_name="Total_Trip_Passengers
