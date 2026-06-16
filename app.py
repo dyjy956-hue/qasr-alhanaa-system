@@ -1,7 +1,5 @@
 
 
-
-
 # تعليق لحماية السطر الأول من المسافات التلقائية
 import streamlit as st
 import pandas as pd
@@ -154,24 +152,26 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                     f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
                 )
 
-                url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
-                url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
-                url_paid = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid)}"
-                url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
-                url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
+                # التعديل فقط هنا: تغيير صيغة الرابط المولد ليتوافق مع الهاتف الذكي مباشرة
+                url_confirm = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_confirm)}"
+                url_remind_pay = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_remind_pay)}"
+                url_paid = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_paid)}"
+                url_tripoli_bus = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_tripoli_bus)}"
+                url_cancel = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_cancel)}"
                 
                 st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
-                with col1: st.markdown(f'<a href="{url_confirm}" target="_blank"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
-                with col2: st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
-                with col3: st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
+                # التعديل فقط هنا: مسح تفصيلة الـ target="_blank" التي تجبر المتصفح على الفتح الداخلي
+                with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
+                with col3: st.markdown(f'<a href="{url_paid}"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
                     if "الشرقية" not in u_reg:
-                        st.markdown(f'<a href="{url_tripoli_bus}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🚌 4. باص طرابلس</button></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{url_tripoli_bus}"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🚌 4. باص طرابلس</button></a>', unsafe_allow_html=True)
                     else:
                         st.button("🔒 4. ركاب الشرقية", disabled=True, help="هذا العميل تابع للمنطقة الشرقية.")
-                with col5: st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
+                with col5: st.markdown(f'<a href="{url_cancel}"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
 
 # ----------------------------------------------------
 # 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل (الجديدة)
@@ -263,7 +263,7 @@ elif page == "🌲 كشف نزلاء منتجع شحات":
 # ----------------------------------------------------
 # 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
 # ----------------------------------------------------
-elif page == "🟢 كشف ركاب طرابلس والغرب":
+elif page == "🟢 كشف ركاب باص طرابلس والمنطقة الغربية":
     st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
     st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
     st.markdown("---")
@@ -312,4 +312,4 @@ elif page == "💰 التقارير المالية والإيرادات":
         st.dataframe(df_finance, use_container_width=True)
         st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
     else:
-        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب Tقرير المالي.")
+        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
