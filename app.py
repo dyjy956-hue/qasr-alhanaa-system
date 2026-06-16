@@ -74,5 +74,70 @@ def display_styled_dataframe(dataframe):
     df_display.insert(0, '#', range(1, len(df_display) + 1))
     st.dataframe(df_display.set_index('#'), use_container_width=True)
 
-# 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
-st.sidebar.title("
+# 🧭 القائمة الجانبية الشاملة للأقسام الثمانية (تم إصلاح وإغلاق السطر المقطوع هنا)
+st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
+
+page = st.sidebar.radio("انتقل إلى القائمة:", [
+    "💬 مركز مراسلة حالات الزبائن",
+    "🔍 استعلام وبطاقة حجز عميل",
+    "📋 الكشف الكلي لجميع الركاب",
+    "🏢 كشف نزلاء فندق قورينا",
+    "🌲 كشف نزلاء منتجع شحات",
+    "🟢 كشف ركاب طرابلس والغرب", 
+    "🔵 كشف ركاب المنطقة الشرقية", 
+    "💰 التقارير المالية والإيرادات"
+])
+
+st.sidebar.markdown("---")
+
+# 🛠️ مربع تغيير الباسورد الذكي داخل السايدبار
+st.sidebar.markdown("### ⚙️ إعدادات الأمان")
+with st.sidebar.expander("🔐 تغيير كلمة المرور"):
+    current_pass = st.text_input("كلمة المرور الحالية:", type="password", key="cur_pass")
+    new_pass = st.text_input("كلمة المرور الجديدة:", type="password", key="new_pass")
+    
+    if st.button("🔄 تحديث كلمة المرور"):
+        if current_pass == st.session_state['master_password']:
+            if new_pass.strip() != "":
+                st.session_state['master_password'] = new_pass
+                st.success("✅ تم تغيير كلمة المرور بنجاح!")
+            else:
+                st.error("❌ لا يمكن تعيين كلمة مرور فارغة.")
+        else:
+            st.error("❌ كلمة المرور الحالية غير صحيحة.")
+
+st.sidebar.markdown("---")
+# زر خروج آمن للموظف في القائمة الجانبية
+if st.sidebar.button("🔒 تسجيل الخروج الآمن", use_container_width=True):
+    st.session_state['authenticated'] = False
+    st.rerun()
+
+if st.sidebar.button("🔄 سحب وتحديث البيانات الشاملة", use_container_width=True):
+    try:
+        st.session_state['df'] = load_data_public('Form responses 1')
+        st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+        st.sidebar.success("تم تحديث كافة البيانات المالية والحجوزات!")
+    except Exception as e:
+        st.sidebar.error(f"تأكد من إعدادات مشاركة الشيت: {e}")
+
+if 'df' not in st.session_state:
+    try: st.session_state['df'] = load_data_public('Form responses 1')
+    except: pass
+
+if 'df_finance' not in st.session_state:
+    try: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+    except: pass
+
+# ----------------------------------------------------
+# 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
+# ----------------------------------------------------
+if page == "💬 مركز مراسلة حالات الزبائن":
+    st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
+    st.subheader("مركز المراسلات الذكي وحالات الزبائن")
+    st.markdown("---")
+
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        
+        col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
+        col_phone = next((c for c in df.columns if 'الهاتف' in
