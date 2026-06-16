@@ -213,21 +213,24 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 
 *شكراً لكم - إدارة شركة قصر الهناء* 🌹"""
                 
-                msg_tripoli_bus = (
-                    "السلام عليكم ورحمة الله وبركاته،\n\n"
-                    "ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
-                    "نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.\n\n"
-                    "إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:\n"
-                    "📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]\n"
-                    "⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]\n"
-                    "🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً\n\n"
-                    f"👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]\n"
-                    "📞 *رقم هاتف السائق:* [الرقم]\n\n"
-                    "⚠️ *ملاحظات هامة جداً للرحلة:*\n"
-                    "1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.\n"
-                    "2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.\n\n"
-                    "*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
-                )
+                msg_tripoli_bus = f"""السلام عليكم ورحمة الله وبركاته،
+
+ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️
+نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.
+
+إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:
+📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]
+⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]
+🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً
+
+👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]
+📞 *رقم هاتف السائق:* [الرقم]
+
+⚠️ *ملاحظات هامة جداً للرحلة:*
+1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.
+2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.
+
+*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"""
                 
                 msg_cancel = f"""السلام عليكم ورحمة الله وبركاته،
 
@@ -239,16 +242,11 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 
 *شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"""
 
-                # تحديث لروابط الواتساب لفتح التطبيق مباشرة
-                def get_wa_intent(phone, text):
-                    encoded_text = urllib.parse.quote(text)
-                    return f"intent://send?phone={phone}&text={encoded_text}#Intent;scheme=smsto;package=com.whatsapp;action=android.intent.action.SENDTO;end"
-
-                url_confirm = get_wa_intent(phone_str, msg_confirm)
-                url_remind_pay = get_wa_intent(phone_str, msg_remind_pay)
-                url_paid = get_wa_intent(phone_str, msg_paid)
-                url_tripoli_bus = get_wa_intent(phone_str, msg_tripoli_bus)
-                url_cancel = get_wa_intent(phone_str, msg_cancel)
+                url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
+                url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
+                url_paid = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid)}"
+                url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
+                url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
                 
                 st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
@@ -280,11 +278,6 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
             
             if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
                 user_full_data = df[df[col_name] == search_user].iloc[0]
-                
-                # البحث عن عمود التكلفة
-                col_cost = next((c for c in df.columns if 'تكلفة' in c or 'مبلغ' in c or 'سعر' in c or 'قيمة' in c), None)
-                cost_val = user_full_data.get(col_cost, 'غير مسجل') if col_cost else 'غير محدد'
-                
                 st.markdown(f"""
                 <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
                     <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
@@ -294,9 +287,6 @@ elif page == "🔍 استعلام وبطاقة حجز عميل":
                     <p style="font-size: 16px;"><b>👥 عدد الأفراد المسجلين:</b> {user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')}</p>
                     <p style="font-size: 16px;"><b>🏨 الفندق / الإقامة:</b> {user_full_data.get(next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c), 'الإقامة'), 'غير محدد')}</p>
                     <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
-                    <div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                        <p style="font-size: 18px; color: #856404; margin: 0;"><b>💰 إجمالي التكلفة:</b> {cost_val}</p>
-                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
