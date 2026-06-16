@@ -6,7 +6,6 @@ st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
 st.subheader("رحلة الجبل الأخضر 2026")
 
-# معرّف الشيت واسم ورقة الفورم
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 SHEET_NAME = 'Form responses 1' 
 
@@ -17,7 +16,6 @@ def load_data_public():
     data.columns = data.columns.str.strip()
     return data
 
-# زر تحديث وسحب البيانات
 if st.button("🔄 تحديث وسحب الحجوزات الحالية"):
     try:
         st.session_state['df'] = load_data_public()
@@ -27,23 +25,19 @@ if st.button("🔄 تحديث وسحب الحجوزات الحالية"):
 
 if 'df' in st.session_state:
     df = st.session_state['df']
-    
     target_column = 'مكان الانطلاق / التسجيل'
     
     if target_column not in df.columns:
         st.error(f"⚠️ لم يتم العثور على عمود '{target_column}'!")
         st.info(f"💡 الأعمدة المتاحة في شيتك هي: {list(df.columns)}")
     else:
-        # تصفية ركاب طرابلس والجهات الأخرى
         region = st.selectbox("تصفية حسب مكان الانطلاق / التسجيل:", ["الكل"] + list(df[target_column].dropna().unique()))
         if region != "الكل":
             df = df[df[target_column] == region]
             
         st.dataframe(df, use_container_width=True)
-        
         st.markdown("---")
         
-        # قسم المراسلة والتأكيد بنقرة واحدة
         selected_user = st.selectbox("اختر اسم الزبون لإرسال التأكيد:", df['الاسم'].dropna().tolist())
         
         if selected_user:
@@ -67,4 +61,4 @@ if 'df' in st.session_state:
             wa_url = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg)}"
             
             st.image("https://images.squarespace-cdn.com/content/v1/660dae564d262963351f7bb5/c209861f-9da3-42e5-ad24-4f59e984f49b/1000150093.jpg", width=350, caption="صورة مسار الجبل الأخضر المرفقة بالرسالة")
-            st.markdown(f'<a href="{wa_url}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">🟢 إرسال التأكيد + الصورة بالواتساب</button></a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="{wa_url}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold
