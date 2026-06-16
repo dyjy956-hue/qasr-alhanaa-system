@@ -61,6 +61,8 @@ if 'df_finance' not in st.session_state:
 # تهيئة ذاكرة الحضور المؤقتة ليوم الرحلة حتى لا تضيع القوائم عند التنقل
 if 'attended_phones' not in st.session_state:
     st.session_state['attended_phones'] = []
+if 'last_scanned_phone' not in st.session_state:
+    st.session_state['last_scanned_phone'] = None
 
 # ----------------------------------------------------
 # 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
@@ -270,7 +272,7 @@ elif page == "🌲 كشف نزلاء منتجع شحات":
             st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
             st.dataframe(df_shahat, use_container_width=True)
         else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق in ملف البيانات لتصفية النزلاء.")
 
 # ----------------------------------------------------
 # 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
@@ -324,7 +326,7 @@ elif page == "💰 التقارير المالية والإيرادات":
         st.dataframe(df_finance, use_container_width=True)
         st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
     else:
-        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' in القائمة الجانبية لسحب التقرير المالي.")
+        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
 
 # ----------------------------------------------------
 # 📲 الصفحة التاسعة: تسجيل حضور العائلات بالباركود
@@ -382,7 +384,7 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                             else:
                                 st.warning("🔄 لم يتم التقاط رمز الباركود بوضوح. الرجاء استخدام خيار 'التسجيل اليدوي السريع' فوراً كبديل لمنع التعطيل.")
                     except Exception as e:
-                        st.error("تنبيه: السيرفر يعمل بالوضع السحابي المحمي، يرجى تفعيل 'التسجيل اليدوي السريع' لإتمام العمل فوراً بنجاح وبدون مشاكل.")
+                        st.error("تنبيه: الكاميرا تعمل بالوضع المحمي، يرجى تفعيل 'التسجيل اليدوي السريع' لإتمام العمل فوراً بنجاح.")
             
             else:
                 st.write("### ✏️ اختر اسم العائلة المتواجدة أمامك الآن لتسجيلها:")
@@ -394,14 +396,18 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                     if not user_row_manual.empty:
                         scanned_phone = user_row_manual.iloc[0]['clean_phone']
             
-            # التحديث الذكي: تسجيل الرقم في الذاكرة بشكل مستقل بمجرد قراءته بنجاح لمنع التكرار والتعليق
-            if scanned_phone and scanned_phone not in st.session_state['attended_phones']:
-                st.session_state['attended_phones'].append(scanned_phone)
+            # تثبيت العائلة النشطة الممسوحة حالياً في الذاكرة الفرعية النشطة
+            if scanned_phone and scanned_phone != st.session_state['last_scanned_phone']:
+                st.session_state['last_scanned_phone'] = scanned_phone
+                if scanned_phone not in st.session_state['attended_phones']:
+                    st.session_state['attended_phones'].append(scanned_phone)
                 st.rerun()
-            
-            # عرض بيانات العائلة النشطة الحالية التي تم رصدها في خطوة المسح الجارية
-            if scanned_phone:
-                user_row = df[df['clean_phone'] == scanned_phone]
+
+            # زر منفصل لتصفير الشاشة يدويًا واستقبال العائلة التالية بشكل آمن بدون أي تعليق
+            if st.session_state['last_scanned_phone']:
+                active_phone = st.session_state['last_scanned_phone']
+                user_row = df[df['clean_phone'] == active_phone]
+                
                 if not user_row.empty:
                     family_name = user_row.iloc[0][col_name]
                     fam_count = user_row.iloc[0][col_count] if col_count else "غير محدد"
@@ -414,10 +420,18 @@ elif page == "📲 تسجيل حضور العائلات بالباركود":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # زر الواتساب هنا مجرد رابط خارجي آمن تماماً ولا يسبب rerun أو تكرار
                     msg_welcome = f"تم تسجيل صعود عائلتكم الكريمة إلى الحافلة بنجاح! 🚌✨\n\nشركة قصر الهناء تتمنى لكم رحلة سعيدة وممتعة إلى الجبل الأخضر. رافقتكم السلامة 🌹"
-                    url_welcome = f"whatsapp://send?phone={scanned_phone}&text={urllib.parse.quote(msg_welcome)}"
-                    st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;">📲 إرسال رسالة الترحيب الفورية للراكب عبر واتساب</button></a>', unsafe_allow_html=True)
+                    url_welcome = f"whatsapp://send?phone={active_phone}&text={urllib.parse.quote(msg_welcome)}"
+                    
+                    col_btn1, col_btn2 = st.columns([3, 1])
+                    with col_btn1:
+                        st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 14px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%;">📲 إرسال رسالة الترحيب الفورية للراكب عبر واتساب</button></a>', unsafe_allow_html=True)
+                    with col_btn2:
+                        if st.button("🔄 العائلة التالية"):
+                            st.session_state['last_scanned_phone'] = None
+                            st.rerun()
+                else:
+                    st.error("⚠️ هذا الرقم غير مسجل في كشوفات هذه الرحلة.")
             
             st.markdown("---")
             
