@@ -61,7 +61,7 @@ if 'df' in st.session_state:
             u_phone = user_data[col_phone]
             u_count = user_data[col_count] if col_count else "غير محدد"
             u_hotel = user_data[col_hotel] if col_hotel else "غير محدد"
-            u_reg = user_data[col_region] if col_region else "غير محدد"
+            u_reg = str(user_data[col_region]) if col_region else ""
             
             phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
             
@@ -78,7 +78,7 @@ if 'df' in st.session_state:
                 f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
             )
             
-            # 2. نص رسالة التذكير بالدفع والسداد (الجديدة)
+            # 2. نص رسالة التذكير بالدفع والسداد
             msg_remind_pay = (
                 f"السلام عليكم ورحمة الله وبركاته،\n\n"
                 f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌹\n\n"
@@ -86,7 +86,7 @@ if 'df' in st.session_state:
                 f"⚠️ ونظراً للإقبال الكبير واقتراب موعد إغلاق الكشوفات، يرجى استكمال إجراءات **السداد المالي لتأكيد الحجز نهائياً** خلال 48 ساعة لتجنب إلغاء المقاعد تلقائياً.\n\n"
                 f"💳 طرق السداد المتاحة:\n"
                 f"- نقداً أو صك في مقر الشركة.\n"
-                f"- تحويل مصرفي (يرجى التواصل معنا لتزويدكم ببيانات الحساب).\n\n"
+                f"- تحويل مصرفي.\n\n"
                 f"يسعدنا جداً أن تكونوا معنا في رحلة العمر! للاستفسار أو التأكيد تواصلوا معنا مباشرة 📞"
             )
             
@@ -101,15 +101,21 @@ if 'df' in st.session_state:
                 f"*شكراً لكم - إدارة شركة قصر الهناء* 🌹"
             )
             
-            # 4. نص رسالة التذكير بموعد الانطلاق
-            msg_reminder = (
+            # 4. نص رسالة باص طرابلس وركاب الغرب (التي أرسلتها بالملّي)
+            msg_tripoli_bus = (
                 f"السلام عليكم ورحمة الله وبركاته،\n\n"
-                f"عائلة *قصر الهناء للخدمات السياحية* الكرام 🏔️✨\n\n"
-                f"نود تذكيركم بأن موعد انطلاق رحلتنا المشوقة إلى (الجبل الأخضر) قد اقترب! 🥳🚌\n\n"
-                f"👤 *المسافر:* {u_name}\n"
-                f"📍 *نقطة التجمع والانطلاق الخاصة بكم:* {u_reg}\n\n"
-                f"⏰ يرجى التواجد في نقطة الانطلاق المحددة قبل الموعد بنصف ساعة لترتيب الحقائب والانطلاق في الوقت تماماً.\n\n"
-                f"*رافقتكم السلامة وننتظركم بكل شوق لتجربة رحلة العمر!* 🌹"
+                f"ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
+                f"نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.\n\n"
+                f"إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:\n"
+                f"📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]\n"
+                f"⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]\n"
+                f"🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً\n\n"
+                f"👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]\n"
+                f"📞 *رقم هاتف السائق:* [الرقم]\n\n"
+                f"⚠️ *ملاحظات هامة جداً للرحلة:*\n"
+                f"1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.\n"
+                f"2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.\n\n"
+                f"*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
             )
             
             # 5. نص رسالة الإلغاء
@@ -121,14 +127,14 @@ if 'df' in st.session_state:
                 f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
             )
 
-            # توليد الروابط
+            # توليد الروابط المشفرة
             url_confirm = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_confirm)}"
             url_remind_pay = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_remind_pay)}"
             url_paid = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_paid)}"
-            url_reminder = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_reminder)}"
+            url_tripoli_bus = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_tripoli_bus)}"
             url_cancel = f"https://wa.me/{phone_str}?text={urllib.parse.quote(msg_cancel)}"
             
-            # التوزيع الجغرافي للأزرار الخمسة بشكل متناسق
+            # عرض الأزرار الخمسة متناسقة وموزعة بالألوان
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
@@ -136,8 +142,12 @@ if 'df' in st.session_state:
             with col2:
                 st.markdown(f'<a href="{url_remind_pay}" target="_blank"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔷 2. تذكير بالدفع</button></a>', unsafe_allow_html=True)
             with col3:
-                st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. تأكيد استلام المال</button></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url_paid}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. تأكيد المال</button></a>', unsafe_allow_html=True)
             with col4:
-                st.markdown(f'<a href="{url_reminder}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟠 4. تذكير بالانطلاق</button></a>', unsafe_allow_html=True)
+                # ميزة ذكية: يظهر الزر البرتقالي مخصصاً لركاب طرابلس والغرب فقط بناءً على نص المعادلة السابقة لحظر الشرقية
+                if "الشرقية" not in u_reg:
+                    st.markdown(f'<a href="{url_tripoli_bus}" target="_blank"><button style="background-color: #ff9800; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🚌 4. باص طرابلس</button></a>', unsafe_allow_html=True)
+                else:
+                    st.button("🔒 4. ركاب الشرقية", disabled=True, help="هذا العميل تابع للمنطقة الشرقية وليس باص طرابلس.")
             with col5:
                 st.markdown(f'<a href="{url_cancel}" target="_blank"><button style="background-color: #d32f2f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔴 5. إلغاء الحجز</button></a>', unsafe_allow_html=True)
