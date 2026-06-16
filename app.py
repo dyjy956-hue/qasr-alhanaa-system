@@ -160,7 +160,7 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 
 الأستاذ(ة): *{u_name}* 🌹
 
-نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌
+نفيدكم بأنه بناءً علىطلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌
 
 نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
 
@@ -239,7 +239,14 @@ elif page == "📋 الكشف الكلي لجميع الركاب":
     
     if 'df' in st.session_state:
         df = st.session_state['df']
-        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
+        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
+        
+        # التعديل: جمع العدد الفعلي للأشخاص الكلي
+        total_people = 0
+        if col_count:
+            total_people = int(pd.to_numeric(df[col_count], errors='coerce').sum())
+            
+        st.success(f"📊 إجمالي عدد الحجوزات (العائلات): {df.shape[0]} عائلة | 👥 الإجمالي العام لعدد الركاب الفعليين: {total_people} شخص مسافر")
         st.dataframe(df, use_container_width=True)
 
 # ----------------------------------------------------
@@ -258,7 +265,6 @@ elif page == "🏢 كشف نزلاء فندق قورينا":
         if col_hotel:
             df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
             
-            # التعديل هنا: حساب إجمالي عدد الأفراد الفعلي للمبيت في فندق قورينا
             total_guests = 0
             if col_stay_count:
                 total_guests = int(pd.to_numeric(df_quryna[col_stay_count], errors='coerce').sum())
@@ -284,7 +290,6 @@ elif page == "🌲 كشف نزلاء منتجع شحات":
         if col_hotel:
             df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
             
-            # التعديل هنا: حساب إجمالي عدد الأفراد الفعلي للمبيت في منتجع شحات
             total_guests = 0
             if col_stay_count:
                 total_guests = int(pd.to_numeric(df_shahat[col_stay_count], errors='coerce').sum())
@@ -305,10 +310,17 @@ elif page == "🟢 كشف ركاب طرابلس والغرب":
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
         
         if col_region:
             df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
+            
+            # التعديل: جمع عدد الأشخاص الفعلي لركاب الغرب
+            tripoli_people = 0
+            if col_count:
+                tripoli_people = int(pd.to_numeric(df_tripoli[col_count], errors='coerce').sum())
+                
+            st.success(f"📊 إجمالي حجوزات طرابلس والغرب: {df_tripoli.shape[0]} عائلة | 👥 إجمالي عدد الركاب الفعليين: {tripoli_people} شخص")
             st.dataframe(df_tripoli, use_container_width=True)
         else:
             st.dataframe(df, use_container_width=True)
@@ -324,10 +336,17 @@ elif page == "🔵 كشف ركاب المنطقة الشرقية":
     if 'df' in st.session_state:
         df = st.session_state['df']
         col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
         
         if col_region:
             df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
-            st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
+            
+            # التعديل: جمع عدد الأشخاص الفعلي لركاب الشرقية
+            east_people = 0
+            if col_count:
+                east_people = int(pd.to_numeric(df_east[col_count], errors='coerce').sum())
+                
+            st.info(f"📊 إجمالي حجوزات المنطقة الشرقية: {df_east.shape[0]} عائلة | 👥 إجمالي عدد الركاب الفعليين: {east_people} شخص")
             st.dataframe(df_east, use_container_width=True)
         else:
             st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
