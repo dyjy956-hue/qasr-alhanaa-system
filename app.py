@@ -33,50 +33,40 @@ if not st.session_state['authenticated']:
     st.stop()
 
 # ====================================================
-# دوال المنظومة
+# الدوال الأساسية
 # ====================================================
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
 
 def load_data_public(sheet_name):
-    encoded_sheet = urllib.parse.quote(sheet_name)
-    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
-    data = pd.read_csv(url)
-    data.columns = data.columns.str.strip()
-    return data
+    try:
+        encoded_sheet = urllib.parse.quote(sheet_name)
+        url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
+        data = pd.read_csv(url)
+        data.columns = data.columns.str.strip()
+        return data
+    except Exception as e:
+        st.error(f"خطأ في الاتصال بالسيرفر: {e}")
+        return pd.DataFrame()
 
 def get_wa_link(phone, text):
-    # دالة ذكية لتشفير الرسائل لضمان التنسيق في الواتساب
     return f"https://wa.me/{phone}?text={urllib.parse.quote(text)}"
-
-def convert_df_to_excel(df_to_export):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_to_export.to_excel(writer, index=False)
-    return output.getvalue()
-
-def display_styled_dataframe(dataframe):
-    df_display = dataframe.copy()
-    df_display.insert(0, '#', range(1, len(df_display) + 1))
-    st.dataframe(df_display.set_index('#'), use_container_width=True)
 
 # ====================================================
 # الواجهة الجانبية
 # ====================================================
 st.sidebar.title("🏢 لوحة تحكم قصر الهناء")
 page = st.sidebar.radio("انتقل إلى القائمة:", [
-    "💬 مركز مراسلة حالات الزبائن", "🔍 استعلام وبطاقة حجز عميل",
-    "📋 الكشف الكلي للركاب", "🏢 كشف نزلاء فندق قورينا",
-    "🌲 كشف نزلاء منتجع شحات", "🟢 كشف ركاب طرابلس والغرب", 
-    "🔵 كشف ركاب المنطقة الشرقية", "💰 التقارير المالية"
+    "💬 مركز مراسلة حالات الزبائن", 
+    "🔍 استعلام وبطاقة حجز عميل",
+    "📋 الكشف الكلي للركاب"
 ])
 
-if st.sidebar.button("🔄 تحديث البيانات الشاملة"):
+if st.sidebar.button("🔄 تحديث البيانات"):
     st.session_state['df'] = load_data_public('Form responses 1')
-    st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
     st.rerun()
 
-if 'df' not in st.session_state: st.session_state['df'] = load_data_public('Form responses 1')
-if 'df_finance' not in st.session_state: st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
+if 'df' not in st.session_state:
+    st.session_state['df'] = load_data_public('Form responses 1')
 
 # ====================================================
 # الصفحات
@@ -86,17 +76,24 @@ if page == "💬 مركز مراسلة حالات الزبائن":
     df = st.session_state['df']
     col_name = next((c for c in df.columns if 'الاسم' in c), None)
     col_phone = next((c for c in df.columns if 'الهاتف' in c), None)
-    
+
     if col_name and col_phone:
         selected_user = st.selectbox("اختر اسم الزبون:", df[col_name].dropna().tolist())
         user_data = df[df[col_name] == selected_user].iloc[0]
         
-        # تنسيق الرسائل (استخدام \n للأسطر و * للخط العريض)
-        msg_confirm = f"السلام عليكم،\n\nمرحباً بك *{user_data[col_name]}* 🌹\nتم استلام بيانات تسجيلكم بنجاح 📊✨\n\nشكراً لثقتكم بقصر الهناء! 🏔️"
+        msg = f"السلام عليكم،\n\nعزيزي *{user_data[col_name]}* 🌹\nتم استلام بياناتكم في شركة *قصر الهناء* بنجاح.\n\nشكراً لثقتكم! 🏔️"
         
-        st.write("### 📲 خيارات المراسلة:")
-        url = get_wa_link(str(user_data[col_phone]), msg_confirm)
-        st.markdown(f'<a href="{url}" target="_blank"><button style="background-color: #25D366; color: white; border: none; padding: 10px; border-radius: 5px;">ارسال رسالة واتساب</button></a>', unsafe_allow_html=True)
+        url = get_wa_link(str(user_data[col_phone]), msg)
+        st.markdown(f'<a href="{url}" target="_blank" style="text-decoration:none;"><button style="background-color: #25D366; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; width: 100%; cursor: pointer;">📲 إرسال رسالة عبر واتساب</button></a>', unsafe_allow_html=True)
 
 elif page == "🔍 استعلام وبطاقة حجز عميل":
-    st.title("🔍 نظام الاستعلام الف
+    st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
+    st.write("استخدم هذا القسم لاستخراج بيانات العميل.")
+
+elif page == "📋 الكشف الكلي للركاب":
+    st.title("📋 الكشف الشامل للركاب")
+    st.dataframe(st.session_state['df'], use_container_width=True)
+
+if st.sidebar.button("🔒 تسجيل الخروج"):
+    st.session_state['authenticated'] = False
+    st.rerun()
