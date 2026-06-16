@@ -1,3 +1,4 @@
+ %%writefile app.py
 import streamlit as st
 import pandas as pd
 import urllib.parse
@@ -6,11 +7,14 @@ st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 st.title("🚌 لوحة تحكم حجوزات قصر الهناء")
 st.subheader("رحلة الجبل الأخضر 2026")
 
+# تم تحديث معرّف واسم الورقة بدقة هنا
 SHEET_ID = '1emyWyimRfJEaX6TKCj2Q8G2h99BND1Or6wG4aZ-Xbpo'
-SHEET_NAME = 'Sheet1' 
+SHEET_NAME = 'Form responses 1' 
 
 def load_data_public():
-    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}'
+    # ترميز اسم الورقة ليتوافق مع الرابط بوجود المسافات
+    encoded_sheet = urllib.parse.quote(SHEET_NAME)
+    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={encoded_sheet}'
     data = pd.read_csv(url)
     data.columns = data.columns.str.strip()
     return data
@@ -26,14 +30,13 @@ if st.button("🔄 تحديث وسحب الحجوزات الحالية"):
 if 'df' in st.session_state:
     df = st.session_state['df']
     
-    # تم تعديل اسم العمود هنا ليتطابق مع ملفك تماماً
     target_column = 'مكان الانطلاق / التسجيل'
     
     if target_column not in df.columns:
         st.error(f"⚠️ لم يتم العثور على عمود '{target_column}'!")
         st.info(f"💡 الأعمدة المتاحة في شيتك هي: {list(df.columns)}")
     else:
-        # تصفية ركاب طرابلس والجهات الأخرى بناءً على عمودك
+        # تصفية ركاب طرابلس والجهات الأخرى
         region = st.selectbox("تصفية حسب مكان الانطلاق / التسجيل:", ["الكل"] + list(df[target_column].dropna().unique()))
         if region != "الكل":
             df = df[df[target_column] == region]
