@@ -4,6 +4,12 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
+# استيراد المكتبات اللازمة للميزة الجديدة (قراءة الباركود)
+try:
+    import cv2
+    import numpy as np
+except ImportError:
+    pass
 
 st.set_page_config(page_title="منظومة قصر الهناء", layout="wide")
 
@@ -17,7 +23,7 @@ def load_data_public(sheet_name):
     data.columns = data.columns.str.strip()
     return data
 
-# 🧭 القائمة الجانبية الشاملة للأقسام الثمانية
+# 🧭 القائمة الجانبية الشاملة للأقسام التسعة (تم إضافة القسم التاسع هنا)
 st.sidebar.title("🏢 لوحة تحكم شركة قصر الهناء")
 page = st.sidebar.radio("انتقل إلى القائمة:", [
     "💬 مركز مراسلة حالات الزبائن",
@@ -27,7 +33,8 @@ page = st.sidebar.radio("انتقل إلى القائمة:", [
     "🌲 كشف نزلاء منتجع شحات",
     "🟢 كشف ركاب طرابلس والغرب", 
     "🔵 كشف ركاب المنطقة الشرقية", 
-    "💰 التقارير المالية والإيرادات"
+    "💰 التقارير المالية والإيرادات",
+    "📲 تسجيل حضور العائلات بالباركود"  # الميزة العالمية الجديدة
 ])
 
 # زر التحديث العام في القائمة الجانبية ليكون متاحاً في كل الصفحات
@@ -51,6 +58,10 @@ if 'df_finance' not in st.session_state:
         st.session_state['df_finance'] = load_data_public('📊 التقرير المالي والإيرادات')
     except:
         pass
+
+# تهيئة ذاكرة الحضور المؤقتة ليوم الرحلة حتى لا تضيع القوائم عند التنقل
+if 'attended_phones' not in st.session_state:
+    st.session_state['attended_phones'] = []
 
 # ----------------------------------------------------
 # 💬 الصفحة الأولى: مركز مراسلة حالات الزبائن
@@ -94,77 +105,69 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 
                 phone_str = str(u_phone).replace('.0','') if '.' in str(u_phone) else str(u_phone)
                 
-                msg_confirm = f"""السلام عليكم ورحمة الله وبركاته،
-
-مرحباً بك أخي/أختي الفاضلة المعزز في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹
-
-يسعدنا جداً إبلاغكم بأنه قد تم استلام بيانات التسجيل الخاصة بكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨
-
-📌 *الاسم المسجل:* {u_name}
-👥 *عدد أفراد العائلة:* {u_count} أشخاص
-🏨 *محل الإقامة المختار:* {u_hotel}
-📍 *مكان الانطلاق:* {u_reg}
-
-💳 يرجى العلم أن الحجز يعتبر *مبدئياً* حتى يتم تأكيد السداد المالي (سواء نقداً في مقر الشركة أو عبر الحساب المصرفي)، وسيقوم موظف الحجوزات بالتواصل معكم لتمام الإجراءات.
-
-*شكراً لثقتكم باختيار قصر الهناء، ونتمنى لكم رحلة ممتعة معنا مقدماً!* 🏔️ وبإذن الله رحلة مباركة للجميع."""
-
-                msg_remind_pay = f"""مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨
-
-✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌
-
-💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:
-يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.
-
-📍 عنوان الشركة: طرابلس - الظهرة.
-⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.
-
-📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.
-
-نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنسى معكم! دمت بخير وفي أمان الله 🌹
-شركة قصر الهناء للاستثمار السياحي."""
-
-                msg_paid = f"""السلام عليكم ورحمة الله وبركاته،
-
-الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟
-
-يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳
-
-👥 *عدد المقاعد المؤكدة:* {u_count}
-🏨 *ترتيبات الإقامة:* {u_hotel}
-
-جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨
-
-*شكراً لكم - إدارة شركة قصر الهناء* 🌹"""
-
-                msg_tripoli_bus = f"""السلام عليكم ورحمة الله وبركاته،
-
-ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️
-نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.
-
-إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:
-📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]
-⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]
-🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً
-
-👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]
-📞 *رقم هاتف السائق:* [الرقم]
-
-⚠️ *ملاحظات هامة جداً للرحلة:*
-1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.
-2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.
-
-*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"""
-
-                msg_cancel = f"""السلام عليكم ورحمة الله وبركاته،
-
-الأستاذ(ة): *{u_name}* 🌹
-
-نفيدكم بأنه بناءً علىطلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌
-
-نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.
-
-*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"""
+                # توليد رابط الباركود الفريد لكل عائلة بناءً على رقم هاتف رب العائلة ليرسله في رسالة التأكيد المالي
+                qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={phone_str}"
+                
+                msg_confirm = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"مرحباً بك في عائلة *شركة قصر الهناء للخدمات السياحية* 🌹\n\n"
+                    f"تم استلام بيانات تسجيلكم لرحلة (الجبل الأخضر الساحر 2026) بنجاح عبر المنظومة 📊✨\n\n"
+                    f"📌 *الاسم:* {u_name}\n"
+                    f"👥 *العدد:* {u_count} أشخاص\n"
+                    f"🏨 *الإقامة:* {u_hotel}\n"
+                    f"📍 *مكان الانطلاق:* {u_reg}\n\n"
+                    f"💳 يعتبر الحجز مبدئياً حتى تأكيد السداد المالي.\n\n"
+                    f"*شكراً لثقتكم باختيار قصر الهناء!* 🏔️"
+                )
+                
+                msg_remind_pay = (
+                    f"مرحباً بك مجدداً وبكل عائلتك الكريمة مع شركة قصر الهناء 👋✨\n\n"
+                    f"✅ تم تأكيد حجزكم بنجاح في #الرحلة_العائلية_للجبل_الاخضر 🏔️🚌\n\n"
+                    f"💡 الخطوة المتبقية لتثبيت المقاعد نهائياً:\n"
+                    f"يرجى التكرم بزيارة مقر الشركة لإتمام عملية الدفع وتأكيد الهوية.\n\n"
+                    f"📍 عنوان الشركة: طرابلس - الظهرة.\n"
+                    f"⏰ آخر موعد للاشتراك والدفع: الجمعة 26-06-2026.\n\n"
+                    f"📌 ملاحظة: يرجى إحضار إثبات الهوية (الكتيب العائلي أو جوازات السفر) عند الحضور للمقر.\n\n"
+                    f"نتطلع لرحلة ممتعة وصناعة ذكريات لا تُنسى معكم! دمت بخير وفي أمان الله 🌹\n"
+                    f"شركة قصر الهناء للاستثمار السياحي."
+                )
+                
+                msg_paid = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"الأستاذ(ة) الفاضل(ة): *{u_name}* 🌟\n\n"
+                    f"يسعدنا إبلاغكم بأنه **تم تأكيد السداد المالي بنجاح** وقبول حجزكم نهائياً لرحلة (الجبل الأخضر الساحر 2026) ✅💳\n\n"
+                    f"👥 *عدد المقاعد المؤكدة:* {u_count}\n"
+                    f"🏨 *ترتيبات الإقامة:* {u_hotel}\n\n"
+                    f"🎫 **بطاقة صعود الحافلة الرقمية الخاصة بعائلتكم:**\n"
+                    f"الرجاء الضغط على الرابط التالي وحفظ صورة الباركود (QR Code) لإبرازها للمشرف عند باب الحافلة يوم الرحلة:\n"
+                    f"{qr_api_url}\n\n"
+                    f"جاهزون لخدمتكم وصناعة أجمل الذكريات معاً! سيتم إرسال تفاصيل التجمع والانطلاق قبل الرحلة بـ 48 ساعة 🚌✨\n\n"
+                    f"*شكراً لكم - إدارة شركة قصر الهناء* 🌹"
+                )
+                
+                msg_tripoli_bus = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"ركابنا الأعزاء من مدينة طرابلس والمنطقة الغربية (رحلة الجبل الأخضر) 🚌🏔️\n"
+                    f"نأمل أن تكونوا بكامل الاستعداد والنشاط لرحلتنا المتميزة مع شركة *قصر الهناء*.\n\n"
+                    f"إليكم التفاصيل النهائية والخاصة بنقطة انطلاق باص طرابلس لرحلة الغد بمشيئة الله:\n"
+                    f"📍 *مكان التجمع الدقيق:* [اكتب المكان هنا]\n"
+                    f"⏰ *وقت التواجد وتنزيل الحقائب:* [الساعة]\n"
+                    f"🚀 *وقت تحرك الحافلة الفعلي:* [الساعة] تماماً\n\n"
+                    f"👤 *مشرف حافلة طرابلس:* [الاسم] -> [الهاتف]\n"
+                    f"📞 *رقم هاتف السائق:* [الرقم]\n\n"
+                    f"⚠️ *ملاحظات هامة جداً للرحلة:*\n"
+                    f"1. يرجى الالتزام التام والمطلق بوقت التجمع، نظراً لأن الحافلة مرتبطة بجدول زمني طويل لقطع المسافة، ولن نتمكن من الانتظار حفاظاً على راحة العائلات الحاضرة في الموعد.\n"
+                    f"2. يرجى مراجعة مشرف الباص فور وصولكم لتأكيد الاسم واستلام ملصقات الحقائب الخاصة بالأمتعة.\n\n"
+                    f"*رافقتكم السلامة في طريقكم، ونلتقي غداً على خير وبركة!* 🌹"
+                )
+                
+                msg_cancel = (
+                    f"السلام عليكم ورحمة الله وبركاته،\n\n"
+                    f"الأستاذ(ة): *{u_name}* 🌹\n\n"
+                    f"نفيدكم بأنه بناءً على طلبكم (أو لعدم استكمال إجراءات التأكيد المالي)، **تم إلغاء تسجيلكم** لرحلة الجبل الأخضر 2026 بنجاح 🖥️❌\n\n"
+                    f"نتمنى لكم التوفيق، ويسعدنا جداً خدمتكم وانضمامكم إلينا في الرحلات والمواسم القادمة بإذن الله.\n\n"
+                    f"*شكراً لكم - شركة قصر الهناء للخدمات السياحية* 🏔️"
+                )
 
                 url_confirm = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_confirm)}"
                 url_remind_pay = f"whatsapp://send?phone={phone_str}&text={urllib.parse.quote(msg_remind_pay)}"
@@ -175,8 +178,8 @@ if page == "💬 مركز مراسلة حالات الزبائن":
                 st.write("### 📲 خيارات المراسلة الفورية وحالات الزبون المختار:")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
-                with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. تأكيد الحجز</button></a>', unsafe_allow_html=True)
-                with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. التأكيد النهائي</button></a>', unsafe_allow_html=True)
+                with col1: st.markdown(f'<a href="{url_confirm}"><button style="background-color: #2b5c8f; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🔵 1. استلام الطلب</button></a>', unsafe_allow_html=True)
+                with col2: st.markdown(f'<a href="{url_remind_pay}"><button style="background-color: #1d3557; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🏁 2. تأكيد المقر والدفع</button></a>', unsafe_allow_html=True)
                 with col3: st.markdown(f'<a href="{url_paid}"><button style="background-color: #25D366; color: white; border: none; padding: 12px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; width: 100%;">🟢 3. السداد النهائي</button></a>', unsafe_allow_html=True)
                 with col4:
                     if "الشرقية" not in u_reg:
@@ -189,180 +192,4 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 # 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
 # ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
-    st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
-    st.subheader("ابحث باسم العميل لاستخراج بطاقة الحجز الفندقية واللوجستية الكاملة")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
-        col_price = next((c for c in df.columns if 'اجمالي التكلفة' in c or 'إجمالي التكلفة' in c or 'تكلفة' in c or 'التكلفة' in c), None)
-        
-        if col_name:
-            search_user = st.selectbox("🎯 اختر أو اكتب اسم العميل للبحث السريع:", ["-- اختر اسماً لعرض تفاصيل حركته --"] + df[col_name].dropna().tolist())
-            
-            if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
-                user_full_data = df[df[col_name] == search_user].iloc[0]
-                u_price = user_full_data.get(col_price, 'غير محدد') if col_price else "غير محدد"
-                
-                u_display_name = user_full_data.get(col_name, 'غير مسجل')
-                u_display_phone = str(user_full_data.get(next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c), 'الهاتف'), 'غير مسجل')).replace('.0','')
-                u_display_count = user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')
-                u_display_hotel = user_full_data.get(next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c), 'الإقامة'), 'غير محدد')
-                u_display_reg = user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')
-
-                st.markdown(f"""
-                <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
-                    <hr style="margin: 10px 0;">
-                    <p style="font-size: 16px;"><b>👤 اسم العميل بالكامل:</b> {u_display_name}</p>
-                    <p style="font-size: 16px;"><b>📞 رقم الهاتف/الواتساب:</b> {u_display_phone}</p>
-                    <p style="font-size: 16px;"><b>👥 عدد الأفراد المسجلين:</b> {u_display_count}</p>
-                    <p style="font-size: 16px;"><b>🏨 الفندق / الإقامة:</b> {u_display_hotel}</p>
-                    <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {u_display_reg}</p>
-                    <p style="font-size: 16px; color: #25D366;"><b>💰 سعر الحجز / القيمة المالية:</b> {u_price}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown("#### 📄 الصف الكامل للبيانات كما ورد في الشيت:")
-                st.dataframe(pd.DataFrame([user_full_data]), use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات للبحث به.")
-
-# ----------------------------------------------------
-# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب
-# ----------------------------------------------------
-elif page == "📋 الكشف الكلي لجميع الركاب":
-    st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
-    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
-        
-        # التعديل: جمع العدد الفعلي للأشخاص الكلي
-        total_people = 0
-        if col_count:
-            total_people = int(pd.to_numeric(df[col_count], errors='coerce').sum())
-            
-        st.success(f"📊 إجمالي عدد الحجوزات (العائلات): {df.shape[0]} عائلة | 👥 الإجمالي العام لعدد الركاب الفعليين: {total_people} شخص مسافر")
-        st.dataframe(df, use_container_width=True)
-
-# ----------------------------------------------------
-# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا
-# ----------------------------------------------------
-elif page == "🏢 كشف نزلاء فندق قورينا":
-    st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        col_stay_count = next((c for c in df.columns if 'عدد افراد العائلة للمبييت' in c or 'عدد أفراد العائلة للمبيت' in c or 'للمبييت' in c or 'للمبيت' in c), None)
-        
-        if col_hotel:
-            df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
-            
-            total_guests = 0
-            if col_stay_count:
-                total_guests = int(pd.to_numeric(df_quryna[col_stay_count], errors='coerce').sum())
-                
-            st.success(f"🏨 إجمالي عدد غرف/حجوزات فندق قورينا: {df_quryna.shape[0]} حجز | 👥 إجمالي عدد النزلاء الفعليين للمبيت: {total_guests} شخص")
-            st.dataframe(df_quryna, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
-
-# ----------------------------------------------------
-# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات
-# ----------------------------------------------------
-elif page == "🌲 كشف نزلاء منتجع شحات":
-    st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
-    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
-        col_stay_count = next((c for c in df.columns if 'عدد افراد العائلة للمبييت' in c or 'عدد أفراد العائلة للمبيت' in c or 'للمبييت' in c or 'للمبيت' in c), None)
-        
-        if col_hotel:
-            df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
-            
-            total_guests = 0
-            if col_stay_count:
-                total_guests = int(pd.to_numeric(df_shahat[col_stay_count], errors='coerce').sum())
-                
-            st.info(f"🏡 إجمالي عدد شاليهات/حجوزات منتجع شحات: {df_shahat.shape[0]} حجز | 👥 إجمالي عدد النزلاء الفعليين للمبيت: {total_guests} شخص")
-            st.dataframe(df_shahat, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
-
-# ----------------------------------------------------
-# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
-# ----------------------------------------------------
-elif page == "🟢 كشف ركاب طرابلس والغرب":
-    st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
-    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
-        
-        if col_region:
-            df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
-            
-            # التعديل: جمع عدد الأشخاص الفعلي لركاب الغرب
-            tripoli_people = 0
-            if col_count:
-                tripoli_people = int(pd.to_numeric(df_tripoli[col_count], errors='coerce').sum())
-                
-            st.success(f"📊 إجمالي حجوزات طرابلس والغرب: {df_tripoli.shape[0]} عائلة | 👥 إجمالي عدد الركاب الفعليين: {tripoli_people} شخص")
-            st.dataframe(df_tripoli, use_container_width=True)
-        else:
-            st.dataframe(df, use_container_width=True)
-
-# ----------------------------------------------------
-# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية
-# ----------------------------------------------------
-elif page == "🔵 كشف ركاب المنطقة الشرقية":
-    st.title("🔵 كشف ركاب المنطقة الشرقية")
-    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
-    st.markdown("---")
-    
-    if 'df' in st.session_state:
-        df = st.session_state['df']
-        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
-        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c or 'عدد أفراد العائلة' in c), None)
-        
-        if col_region:
-            df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
-            
-            # التعديل: جمع عدد الأشخاص الفعلي لركاب الشرقية
-            east_people = 0
-            if col_count:
-                east_people = int(pd.to_numeric(df_east[col_count], errors='coerce').sum())
-                
-            st.info(f"📊 إجمالي حجوزات المنطقة الشرقية: {df_east.shape[0]} عائلة | 👥 إجمالي عدد الركاب الفعليين: {east_people} شخص")
-            st.dataframe(df_east, use_container_width=True)
-        else:
-            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
-
-# ----------------------------------------------------
-# 💰 الصفحة الثامنة: التقارير المالية والإيرادات
-# ----------------------------------------------------
-elif page == "💰 التقارير المالية والإيرادات":
-    st.title("💰 الإيرادات والتقارير المالية للشركة")
-    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
-    st.markdown("---")
-
-    if 'df_finance' in st.session_state:
-        df_finance = st.session_state['df_finance']
-        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
-        st.dataframe(df_finance, use_container_width=True)
-        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
-    else:
-        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
+    st.title("🔍 نظام الاستعلام
