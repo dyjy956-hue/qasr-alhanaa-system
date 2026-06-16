@@ -192,4 +192,250 @@ if page == "💬 مركز مراسلة حالات الزبائن":
 # 🔍 الصفحة الثانية: استعلام وبطاقة حجز عميل
 # ----------------------------------------------------
 elif page == "🔍 استعلام وبطاقة حجز عميل":
-    st.title("🔍 نظام الاستعلام
+    st.title("🔍 نظام الاستعلام الفوري وعرض بيانات الحجز")
+    st.subheader("ابحث باسم العميل لاستخراج بطاقة الحجز الفندقية واللوجستية الكاملة")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
+        
+        if col_name:
+            search_user = st.selectbox("🎯 اختر أو اكتب اسم العميل للبحث السريع:", ["-- اختر اسماً لعرض تفاصيل حركته --"] + df[col_name].dropna().tolist())
+            
+            if search_user != "-- اختر اسماً لعرض تفاصيل حركته --":
+                user_full_data = df[df[col_name] == search_user].iloc[0]
+                
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; border-right: 5px solid #1d3557; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #1d3557; margin-top: 0;">🎫 بطاقة البيانات التفصيلية للحجز</h3>
+                    <hr style="margin: 10px 0;">
+                    <p style="font-size: 16px;"><b>👤 اسم العميل بالكامل:</b> {user_full_data.get(col_name, 'غير مسجل')}</p>
+                    <p style="font-size: 16px;"><b>📞 رقم الهاتف/الواتساب:</b> {str(user_full_data.get(next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c), 'الهاتف'), 'غير مسجل')).replace('.0','')}</p>
+                    <p style="font-size: 16px;"><b>👥 عدد الأفراد المسجلين:</b> {user_full_data.get(next((c for c in df.columns if 'العدد' in c or 'أفراد' in c), 'العدد'), 'غير محدد')}</p>
+                    <p style="font-size: 16px;"><b>🏨 الفندق / الإقامة:</b> {user_full_data.get(next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c), 'الإقامة'), 'غير محدد')}</p>
+                    <p style="font-size: 16px;"><b>📍 محطة ونقطة الانطلاق:</b> {user_full_data.get(next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c), 'مكان الانطلاق'), 'غير محدد')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("#### 📄 الصف الكامل للبيانات كما ورد في الشيت:")
+                st.dataframe(pd.DataFrame([user_full_data]), use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود الاسم في ملف البيانات للبحث به.")
+
+# ----------------------------------------------------
+# 📋 الصفحة الثالثة: الكشف الكلي لجميع الركاب
+# ----------------------------------------------------
+elif page == "📋 الكشف الكلي لجميع الركاب":
+    st.title("📋 الكشف الشامل والكلي لجميع ركاب الرحلة")
+    st.subheader("عرض قاعدة البيانات الكاملة من السحابة دون أي استثناء")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        st.success(f"📊 العدد الإجمالي الكلي لكافة المسافرين المسجلين في المنظومة: {df.shape[0]} مسافر")
+        st.dataframe(df, use_container_width=True)
+
+# ----------------------------------------------------
+# 🏢 الصفحة الرابعة: كشف نزلاء فندق قورينا
+# ----------------------------------------------------
+elif page == "🏢 كشف نزلاء فندق قورينا":
+    st.title("🏢 كشف المسافرين المقيمين في فندق قورينا")
+    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
+        
+        if col_hotel:
+            df_quryna = df[df[col_hotel].astype(str).str.contains("قورينا")].copy()
+            st.success(f"🏨 إجمالي عدد نزلاء فندق قورينا حالياً: {df_quryna.shape[0]} مسافر")
+            st.dataframe(df_quryna, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
+
+# ----------------------------------------------------
+# 🌲 الصفحة الخامسة: كشف نزلاء منتجع شحات
+# ----------------------------------------------------
+elif page == "🌲 كشف نزلاء منتجع شحات":
+    st.title("🌲 كشف المسافرين المقيمين في منتجع شحات السياحي")
+    st.subheader("تصفية تلقائية بناءً على خيار الإقامة الفندقية المختارة")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_hotel = next((c for c in df.columns if 'الإقامة' in c or 'فندق' in c or 'محل' in c), None)
+        
+        if col_hotel:
+            df_shahat = df[df[col_hotel].astype(str).str.contains("شحات")].copy()
+            st.info(f"🏡 إجمالي عدد نزلاء منتجع شحات حالياً: {df_shahat.shape[0]} مسافر")
+            st.dataframe(df_shahat, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود الإقامة/الفندق في ملف البيانات لتصفية النزلاء.")
+
+# ----------------------------------------------------
+# 🟢 الصفحة السادسة: كشف ركاب طرابلس والغرب
+# ----------------------------------------------------
+elif page == "🟢 كشف ركاب طرابلس والغرب":
+    st.title("🟢 كشف ركاب باص طرابلس والمنطقة الغربية")
+    st.subheader("كشف المسافرين المستثنى منه ركاب المنطقة الشرقية")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
+        if col_region:
+            df_tripoli = df[~df[col_region].astype(str).str.contains("الشرقية")].copy()
+            st.success(f"📊 إجمالي ركاب طرابلس والغرب المقيدين حالياً: {df_tripoli.shape[0]} مسافر")
+            st.dataframe(df_tripoli, use_container_width=True)
+        else:
+            st.dataframe(df, use_container_width=True)
+
+# ----------------------------------------------------
+# 🔵 الصفحة السابعة: كشف ركاب المنطقة الشرقية
+# ----------------------------------------------------
+elif page == "🔵 كشف ركاب المنطقة الشرقية":
+    st.title("🔵 كشف ركاب المنطقة الشرقية")
+    st.subheader("كشف مخصص للمسافرين المسجلين من المنطقة الشرقية فقط")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
+        if col_region:
+            df_east = df[df[col_region].astype(str).str.contains("الشرقية")].copy()
+            st.info(f"📊 إجمالي ركاب المنطقة الشرقية المقيدين حالياً: {df_east.shape[0]} مسافر")
+            st.dataframe(df_east, use_container_width=True)
+        else:
+            st.warning("⚠️ لم يتم العثور على عمود المنطقة لتصفية ركاب الشرقية.")
+
+# ----------------------------------------------------
+# 💰 الصفحة الثامنة: التقارير المالية والإيرادات
+# ----------------------------------------------------
+elif page == "💰 التقارير المالية والإيرادات":
+    st.title("💰 الإيرادات والتقارير المالية للشركة")
+    st.subheader("متابعة المداخيل والحسابات لرحلة 2026")
+    st.markdown("---")
+
+    if 'df_finance' in st.session_state:
+        df_finance = st.session_state['df_finance']
+        st.write("### 📈 كشف الإيرادات والمصروفات الحالي:")
+        st.dataframe(df_finance, use_container_width=True)
+        st.info(f"💡 مجموع الأسطر المالية المسجلة حالياً: {df_finance.shape[0]} صفّاً.")
+    else:
+        st.warning("🔄 الرجاء الضغط على زر 'سحب وتحديث البيانات الشاملة' في القائمة الجانبية لسحب التقرير المالي.")
+
+# ----------------------------------------------------
+# 📲 الصفحة التاسعة: تسجيل حضور العائلات بالباركود
+# ----------------------------------------------------
+elif page == "📲 تسجيل حضور العائلات بالباركود":
+    st.title("📲 نظام مسح الباركود الذكي وتثبيت الحضور الفوري")
+    st.subheader("لوحة حية مخصصة لمشرف الحافلة لإدارة ركوب العائلات")
+    st.markdown("---")
+    
+    if 'df' in st.session_state:
+        df = st.session_state['df']
+        col_name = next((c for c in df.columns if 'الاسم' in c or 'اسم' in c), None)
+        col_phone = next((c for c in df.columns if 'الهاتف' in c or 'رقم' in c or 'موبايل' in c), None)
+        col_count = next((c for c in df.columns if 'العدد' in c or 'أفراد' in c or 'اشخاص' in c), None)
+        col_region = next((c for c in df.columns if 'انطلاق' in c or 'مكان' in c or 'تسجيل' in c), None)
+        
+        if col_name and col_phone:
+            # تجهيز القوائم والبيانات الحية بناء على ذاكرة النظام المؤقتة
+            df['clean_phone'] = df[col_phone].astype(str).str.replace('.0', '', regex=False).str.strip()
+            
+            # تصنيف العائلات (حاضر / متبقي)
+            df_attended = df[df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
+            df_missing = df[~df['clean_phone'].isin(st.session_state['attended_phones'])].copy()
+            
+            # عرض العدادات والإحصائيات الحية في الأعلى للمشرف
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("👥 إجمالي العائلات بالرحلة", len(df))
+            with c2:
+                st.metric("🟢 عائلات تم تسجيل حضورها", len(df_attended))
+            with c3:
+                st.metric("🔴 عائلات متبقية ومتأخرة", len(df_missing))
+                
+            st.markdown("---")
+            
+            # كاميرا المسح الفوري
+            st.write("### 📸 وجه كاميرا الموبايل نحو باركود العائلة:")
+            img_file = st.camera_input("اضغط لالتقاط صورة الباركود ومسحه")
+            
+            if img_file is not None:
+                file_bytes = np.asarray(bytearray(img_file.read()), dtype=np.uint8)
+                opencv_img = cv2.imdecode(file_bytes, 1)
+                
+                # استخدام قارئ الباركود المدمج في OpenCV
+                detector = cv2.QRCodeDetector()
+                data, bbox, straight_qrcode = detector.detectAndDecode(opencv_img)
+                
+                if data:
+                    scanned_phone = str(data).strip()
+                    user_row = df[df['clean_phone'] == scanned_phone]
+                    
+                    if not user_row.empty:
+                        family_name = user_row.iloc[0][col_name]
+                        fam_count = user_row.iloc[0][col_count] if col_count else "غير محدد"
+                        
+                        st.success(f"🎉 تم التعرف التلقائي على الباركود بنجاح!")
+                        st.markdown(f"""
+                        <div style="background-color: #e8f5e9; border-right: 5px solid #2e7d32; padding: 15px; border-radius: 5px;">
+                            <h4 style="color: #2e7d32; margin: 0;">✅ بيانات العائلة الحاضرة الآن:</h4>
+                            <p style="margin: 5px 0; font-size: 16px;"><b>اسم العائلة:</b> {family_name} | <b>عدد الأفراد:</b> {fam_count} أشخاص</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # إضافة الرقم لقائمة الحضور إذا لم يكن مضافاً من قبل
+                        if scanned_phone not in st.session_state['attended_phones']:
+                            st.session_state['attended_phones'].append(scanned_phone)
+                            st.rerun()
+                        
+                        # إظهار زر الإرسال الفوري للرسالة للراكب عند المسح مباشرة
+                        msg_welcome = f"تم تسجيل صعود عائلتكم الكريمة إلى الحافلة بنجاح! 🚌✨\n\nشركة قصر الهناء تتمنى لكم رحلة سهيدة وممتعة إلى الجبل الأخضر. رافقتكم السلامة 🌹"
+                        url_welcome = f"whatsapp://send?phone={scanned_phone}&text={urllib.parse.quote(msg_welcome)}"
+                        st.markdown(f'<a href="{url_welcome}"><button style="background-color: #2e7d32; color: white; border: none; padding: 12px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;">📲 إرسال رسالة التثبيت الفورية للراكب عبر واتساب</button></a>', unsafe_allow_html=True)
+                    else:
+                        st.error("⚠️ الباركود صحيح، ولكن رقم الهاتف هذا غير مسجل في كشوفات هذه الرحلة.")
+                else:
+                    st.warning("🔄 لم يتم لقط الباركود بوضوح، يرجى ضبط الإضاءة وتوجيه الكاميرا جيداً ثم التقاط الصورة مجدداً.")
+            
+            st.markdown("---")
+            
+            # عرض الجداول الحية للمشرف (المتبقين والحاضرين) ومراسلة المتأخرين
+            col_tab1, col_tab2 = st.tabs(["🔴 العائلات المتبقية (لم تصل بعد)", "🟢 العائلات التي صعدت الحافلة"])
+            
+            with col_tab1:
+                if not df_missing.empty:
+                    st.write("📋 **اضغط على زر التنبيه بجانب اسم العائلة لإعلامهم ببدء صعود الحافلة فوراً:**")
+                    for idx, row in df_missing.iterrows():
+                        m_name = row[col_name]
+                        m_phone = row['clean_phone']
+                        m_count = row[col_count] if col_count else "غير محدد"
+                        m_reg = row[col_region] if col_region else ""
+                        
+                        msg_alert = f"مرحباً يا أستاذ {m_name}، نحن الآن في مرحلة صعود حافلة قصر الهناء والانطلاق قريب جداً بمشيئة الله 🚌.\n\nيرجى التكرم بالتوجه نحو الحافلة وإبراز الباركود للمشرف لتسجيل حضوركم وصعودكم. ننتظركم بكل حب 🌹"
+                        url_alert = f"whatsapp://send?phone={m_phone}&text={urllib.parse.quote(msg_alert)}"
+                        
+                        sub_c1, sub_c2 = st.columns([4, 1])
+                        with sub_c1:
+                            st.markdown(f"👤 **{m_name}** ({m_count} أشخاص) - محطة: {m_reg}")
+                        with sub_c2:
+                            st.markdown(f'<a href="{url_alert}"><button style="background-color: #d32f2f; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; width: 100%;">🔔 تنبيه بالصعود</button></a>', unsafe_allow_html=True)
+                else:
+                    st.success("🎉 رائـع! اكتمل حضور جميع العائلات بنجاح، الباص جاهز للانطلاق.")
+                    
+            with col_tab2:
+                if not df_attended.empty:
+                    show_cols = [col_name]
+                    if col_count: show_cols.append(col_count)
+                    if col_region: show_cols.append(col_region)
+                    st.dataframe(df_attended[show_cols], use_container_width=True)
+                else:
+                    st.info("ℹ️ لم يتم تسجيل صعود أي عائلة بعد.")
+        else:
+            st.warning("⚠️ يرجى التأكد من مطابقة أسماء أعمدة الشيت (الاسم والهاتف) لتفعيل نظام الباركود.")
